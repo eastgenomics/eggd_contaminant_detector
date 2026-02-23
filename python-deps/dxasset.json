@@ -1,0 +1,13 @@
+{
+  "name": "eggd_contaminant_detector_python_deps",
+  "version": "1.0.0",
+  "title": "eggd_contaminant_detector python dependencies",
+  "description": "Compiled Python dependencies for eggd_contaminant_detector",
+  "release": "24.04",
+  "distribution": "Ubuntu",
+  "instanceType": "mem2_ssd1_x4",
+  "runSpec": {
+    "interpreter": "bash"
+  }
+}
+

@@ -1,103 +1,66 @@
 {
-  "name": "eggd_<tool_name>",
-  "title": "eggd_<tool_name>",
-  "summary": "description",
+  "name": "eggd_contaminant_detector",
+  "title": "eggd_contaminant_detector",
+  "summary": "App to produce plots on contamination source",
   "dxapi": "1.0.0",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "properties": {
-    "githubRelease": "1.0.0"
+    "githubRelease": "0.1.0"
     },
   "inputSpec": [
     {
-      "name": "input_file",
-      "class": "file",
-      "optional": true,
-      "label": "Name of input file",
-      "patterns": [
-        "*.tsv", "*.vcf", "*.bed", "*.xlsx"
-      ],
-      "help": "Description"
-    },
-    {
-      "name": "input_file_array",
+      "name": "contaminated_samples",
       "class": "array:file",
       "optional": false,
-      "label": "Name of input file array",
-      "suggestions": [
-        {
-        "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-        "path": "/folder1/folder2/"
-        }
-      ],
-      "help": "Description"
+      "label": "Contaminated samples",
+      "help": "Array of VCFs from contaminated samples"
     },
     {
-      "name": "input_boolean",
-      "class": "boolean",
-      "optional": true,
-      "default": true,
-      "label": "Name of field",
-      "help": "Description"
-    },
-    {
-      "name": "input_string",
-      "class": "string",
-      "label": "Input string field name",
-      "optional": true,
-      "default": "default string input",
-      "help": "Description"
+      "name": "candidates",
+      "class": "array:file",
+      "optional": false,
+      "label": "Candidates",
+      "help": "Array of VCFs that are candidates for being a contamination source"
     }
   ],
   "outputSpec": [
     {
-      "name": "output_file",
+      "name": "sompy_csv",
       "class": "file",
-      "label": "output file",
+      "label": "sompy CSV",
       "patterns": [
-        "*.tsv", "*.vcf", "*.bed", "*.xlsx"
+        "*.csv"
       ],
-      "help": "Description"
+      "help": "Aggregated sompy output for all samples"
     },
     {
-      "name": "output_files_array",
-      "class": "array:file",
-      "label": "output files",
-      "optional": true,
-      "help": "Description"
+      "name": "recall_plot",
+      "class": "file",
+      "label": "Recall plot",
+      "patterns": [
+        "*.png", "*.html", "*.svg", "*.jpg", "*.jpeg"
+      ]
     }
-
   ],
   "runSpec": {
+    "assetDepends": [
+      {
+	"id": "record-J6K6jf848pGkz5GJpbPp0F5y"
+      },
+      {
+        "id": "record-J6K6y3j4Jg9pqyX8j0jKB59k"
+      }
+    ],
     "timeoutPolicy": {
       "*": {
         "hours": 2
       }
     },
     "distribution": "Ubuntu",
-    "release": "20.04",
+    "release": "24.04",
     "version": "0",
-    "interpreter": "bash",
-    "file": "src/code.sh",
-    "assetDepends": [
-      {
-        "name": "bedtools",
-        "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-        "folder": "/app_assets/bedtools/bedtools_v2.30.0",
-        "version": "2.30.0"
-      },
-      {
-        "name": "htslib",
-        "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-        "folder": "/app_assets/htslib/htslib_v1.15.0",
-        "version": "1.15.0"
-      },
-      {
-        "name": "python_packages",
-        "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-        "folder": "/app_assets/python_packages/python_packages_v1.1.0",
-        "version": "1.1.0"
-      }
-    ]
+    "interpreter": "python3",
+    "file": "src/script.py"
   },
   "developers":[
     "org-emee_1"
@@ -108,9 +71,15 @@
   "regionalOptions": {
     "aws:eu-central-1": {
       "systemRequirements": {
-        "*": {
+        "main": {
           "instanceType": "mem1_ssd1_v2_x2"
-        }
+        },
+	"sompy": {
+	  "instanceType": "mem1_ssd1_v2_x4"
+	},
+	"aggregate": {
+	  "instanceType": "mem1_ssd1_v2_x2"
+	}
       }
     }
   }
