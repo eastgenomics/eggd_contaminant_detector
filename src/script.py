@@ -16,30 +16,46 @@ from docker_utils import run_sompy
 
 DX_ID_PATTERN = r"^file-[a-zA-Z0-9]{24}$"
 dx_file_id = Annotated[str, "DNAnexus File ID", DX_ID_PATTERN]
-DXLink = TypedDict('DXLink', {"$dnanexus_link": dx_file_id})
+DXLink = TypedDict("DXLink", {"$dnanexus_link": dx_file_id})
 T = TypeVar("T", DXFile, DXLink)
+
 
 class SompyJobOutput(TypedDict):
     stats_csv: DXFile
+
 
 class SompyResults(TypedDict, Generic[T]):
     recall_plot: T
     sompy_csv: T
 
+
 #### * ~ <3  T h a n k s  <3 ~ * ####
 
+
 @dxpy.entry_point("main")
-def main(contaminated_samples: list[DXLink], candidates: list[DXLink]) -> SompyResults[DXLink]:
+def main(
+    contaminated_samples: list[DXLink], candidates: list[DXLink]
+) -> SompyResults[DXLink]:
     sompy_refs = []
     for truth in contaminated_samples:
         for query in candidates:
-            sompy_job = dxpy.new_dxjob(fn_input={"truth": truth["$dnanexus_link"], "query": query["$dnanexus_link"]}, fn_name="sompy")
+            sompy_job = dxpy.new_dxjob(
+                fn_input={
+                    "truth": truth["$dnanexus_link"],
+                    "query": query["$dnanexus_link"],
+                },
+                fn_name="sompy",
+            )
             sompy_refs.append(sompy_job.get_output_ref("stats_csv"))
 
     agg_job = dxpy.new_dxjob(fn_input={"sompy_files": sompy_refs}, fn_name="aggregate")
-    return {"sompy_csv": agg_job.get_output_ref("sompy_csv"), "recall_plot": agg_job.get_output_ref("recall_plot")}
+    return {
+        "sompy_csv": agg_job.get_output_ref("sompy_csv"),
+        "recall_plot": agg_job.get_output_ref("recall_plot"),
+    }
 
-@dxpy.entry_point('sompy')
+
+@dxpy.entry_point("sompy")
 def sompy(truth: dx_file_id, query: dx_file_id) -> SompyJobOutput:
     input_path = Path("/home/dnanexus/in")
     input_path.mkdir(exist_ok=True)
@@ -49,6 +65,7 @@ def sompy(truth: dx_file_id, query: dx_file_id) -> SompyJobOutput:
     sompy_output = run_sompy(vcfs[truth], vcfs[query], "mock-sompy:latest")
     stats_dxfile = dxpy.upload_local_file(str(sompy_output))
     return {"stats_csv": stats_dxfile}
+
 
 @dxpy.entry_point("aggregate")
 def aggregate(sompy_files) -> SompyResults[DXFile]:
@@ -63,6 +80,7 @@ def aggregate(sompy_files) -> SompyResults[DXFile]:
     plot_dxfile = dxpy.upload_local_file(recall_plot)
     sompy_dxfile = dxpy.upload_local_file(agg_sompy_data)
     return {"recall_plot": plot_dxfile, "sompy_csv": sompy_dxfile}
+
 
 if __name__ == "__main__":
     dxpy.run()

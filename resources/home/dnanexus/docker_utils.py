@@ -8,6 +8,7 @@ from docker import DockerClient
 from docker.models.containers import Container
 from docker.types import Mount
 
+
 def run_sompy(truth: str, query: str, image_name: str) -> Path:
     container = run_image(truth, query, image_name)
     container.wait()
@@ -15,19 +16,21 @@ def run_sompy(truth: str, query: str, image_name: str) -> Path:
     container.remove()
     return output
 
+
 def run_image(truth: str, query: str, image_name: str) -> Container:
     client = load_image()
     src = "/home/dnanexus/in"
     dst = "/opt/data"
     mount_point = make_bindmount(src, dst)
     container = client.containers.run(
-            image=image_name,
-            mounts=[mount_point],
-            command=[f"{dst}/{truth}", f"{dst}/{query}"],
-            detach=True,
-            auto_remove=False
-            )
+        image=image_name,
+        mounts=[mount_point],
+        command=[f"{dst}/{truth}", f"{dst}/{query}"],
+        detach=True,
+        auto_remove=False,
+    )
     return container
+
 
 def load_image() -> DockerClient:
     p = Path("/image/")
@@ -37,8 +40,10 @@ def load_image() -> DockerClient:
         client.images.load(f)
     return client
 
+
 def make_bindmount(src: str, dst: str) -> Mount:
     return Mount(source=src, target=dst, type="bind")
+
 
 def extract_stats(container: Container, output_path: Path) -> Path:
     file_obj = io.BytesIO()
