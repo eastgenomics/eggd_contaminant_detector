@@ -34,8 +34,7 @@ class SompyResults(TypedDict, Generic[T]):
 
 @dxpy.entry_point("main")
 def main(
-    contaminated_samples: list[DXLink], candidates: list[DXLink]
-) -> SompyResults[DXLink]:
+    contaminated_samples: list[DXLink], candidates: list[DXLink]) -> SompyResults[DXLink]:
     sompy_refs = []
     for truth in contaminated_samples:
         for query in candidates:
@@ -47,7 +46,6 @@ def main(
                 fn_name="sompy",
             )
             sompy_refs.append(sompy_job.get_output_ref("stats_csv"))
-
     agg_job = dxpy.new_dxjob(fn_input={"sompy_files": sompy_refs}, fn_name="aggregate")
     return {
         "sompy_csv": agg_job.get_output_ref("sompy_csv"),
