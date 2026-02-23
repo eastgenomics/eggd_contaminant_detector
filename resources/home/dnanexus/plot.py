@@ -10,8 +10,7 @@ from matplotlib.figure import Figure
 
 
 def process_sompy_data(
-    input_path: Path, pattern: str = "*.stats.csv", output: str = "agg_sompy_data.csv"
-) -> Path:
+    input_path: Path, pattern: str = "*.stats.csv", output: str = "agg_sompy_data.csv") -> Path:
     df = read_sompy_stats(input_path, pattern)
     ## First column is unnamed in sompy output for some reason.
     ## It's the row index, but it's per file so it repeats [0,1,2]
