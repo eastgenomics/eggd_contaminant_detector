@@ -1,59 +1,68 @@
 #!/usr/bin/env python3
 
-import docker
-import os
 import sys
-from dxpy import entry_point, run, new_dxjob, download_dxfile
+import os
 from pathlib import Path
+from typing import Annotated, TypedDict, TypeVar, Generic, Union
+
+import dxpy
+from dxpy import DXFile
 
 sys.path.append(os.path.dirname(__file__))
+from plot import process_sompy_data, plot_snv_recall
+from docker_utils import run_sompy
 
-from plot import read_sompy_df, plot_snv_recall
-from docker_utils import load_image, run_image, extract_output
+#### * ~ <3  T y p e   H i n t i n g  <3 ~ * ####
+
+DX_ID_PATTERN = r"^file-[a-zA-Z0-9]{24}$"
+dx_file_id = Annotated[str, "DNAnexus File ID", DX_ID_PATTERN]
+DXLink = TypedDict('DXLink', {"$dnanexus_link": dx_file_id})
+T = TypeVar("T", DXFile, DXLink)
+
+class SompyJobOutput(TypedDict):
+    stats_csv: DXFile
+
+class SompyResults(TypedDict, Generic[T]):
+    recall_plot: T
+    sompy_csv: T
+
+#### * ~ <3  T h a n k s  <3 ~ * ####
 
 @dxpy.entry_point("main")
-def main(contaminated_samples, candidates):
+def main(contaminated_samples: list[DXLink], candidates: list[DXLink]) -> SompyResults[DXLink]:
     sompy_refs = []
     for truth in contaminated_samples:
         for query in candidates:
             sompy_job = dxpy.new_dxjob(fn_input={"truth": truth["$dnanexus_link"], "query": query["$dnanexus_link"]}, fn_name="sompy")
-            sompy_refs.append(sompy_job.get_output_ref("sompy_output"))
+            sompy_refs.append(sompy_job.get_output_ref("stats_csv"))
 
     agg_job = dxpy.new_dxjob(fn_input={"sompy_files": sompy_refs}, fn_name="aggregate")
     return {"sompy_csv": agg_job.get_output_ref("sompy_csv"), "recall_plot": agg_job.get_output_ref("recall_plot")}
 
-@entry_point('sompy')
-def run_sompy(truth, query):
-    Path("/home/dnanexus/in").mkdir(exist_ok=True)
+@dxpy.entry_point('sompy')
+def sompy(truth: dx_file_id, query: dx_file_id) -> SompyJobOutput:
+    input_path = Path("/home/dnanexus/in")
+    input_path.mkdir(exist_ok=True)
     vcfs = {vcf_id: dxpy.describe(vcf_id)["name"] for vcf_id in [truth, query]}
     for vcf_id in vcfs:
-        dxpy.download_dxfile(vcf_id, filename=f"/home/dnanexus/in/{vcfs[vcf_id]}")
-    client = load_image()
-    mount = docker.types.Mount(target="/opt/data/", source="/home/dnanexus/in", type="bind")
-    container = run_image(client, "mock-sompy:latest", f"/opt/data/{vcfs[truth]}", f"/opt/data/{vcfs[query]}", mount)
-    container.wait()
-    sompy_output = extract_output(container, "/opt/output")
-    stats_csv_id = dxpy.upload_local_file(sompy_output)
-    return {"sompy_output": stats_csv_id}
+        dxpy.download_dxfile(vcf_id, filename=str(input_path / vcfs[vcf_id]))
+    sompy_output = run_sompy(vcfs[truth], vcfs[query], "mock-sompy:latest")
+    stats_dxfile = dxpy.upload_local_file(str(sompy_output))
+    return {"stats_csv": stats_dxfile}
 
 @dxpy.entry_point("aggregate")
-def aggregate(sompy_files):
+def aggregate(sompy_files) -> SompyResults[DXFile]:
+    input_path = Path("/home/dnanexus/in/")
+    input_path.mkdir(exist_ok=True)
     for sompy_file in sompy_files:
         sompy_id = sompy_file["$dnanexus_link"]
         name = dxpy.describe(sompy_id)["name"]
-        dxpy.download_dxfile(sompy_id, filename=name)
-    files = Path(".").glob("*.stats.csv")
-    df = pd.concat([read_sompy_df(file) for file in files])
-    ## First column is unnamed in sompy output for some reason.
-    ## It's the row index, but it's per file so it repeats [0,1,2]
-    ## and is therefore useless to us
-    df.drop(df.columns[0], axis=1, inplace=True)
-    df.to_csv("agg_sompy_data.csv")
-    plot = plot_snv_recall(df)
-    plot.savefig("snv_recall.png")
-    plot_id = dxpy.upload_local_file("snv_recall.png")
-    sompy_data_id = dxpy.upload_local_file("agg_sompy_data.csv")
-    return {"recall_plot": plot_id, "sompy_csv": sompy_data_id}
+        dxpy.download_dxfile(sompy_id, filename=str(input_path / name))
+    agg_sompy_data = process_sompy_data(input_path)
+    recall_plot = plot_snv_recall(agg_sompy_data)
+    plot_dxfile = dxpy.upload_local_file(recall_plot)
+    sompy_dxfile = dxpy.upload_local_file(agg_sompy_data)
+    return {"recall_plot": plot_dxfile, "sompy_csv": sompy_dxfile}
 
 if __name__ == "__main__":
-    run()
+    dxpy.run()
