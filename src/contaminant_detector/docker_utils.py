@@ -54,7 +54,6 @@ def extract_stats(container: Container, output_path: Path) -> Path:
     output_path.mkdir(exist_ok=True)
     with tarfile.open(fileobj=file_obj) as tar:
         stats_csv = [f for f in tar.getmembers() if f.name.endswith(".stats.csv")][0]
-        # it's a tarInfo object, so it has a "name" attribute
         stats_csv.name = Path(stats_csv.name).name
         tar.extract(stats_csv, path=output_path)
     stats_path = next(output_path.glob("*.stats.csv"))

@@ -3,14 +3,12 @@
 import sys
 import os
 from pathlib import Path
-from typing import Annotated, TypedDict, TypeVar, Generic, Union
+from typing import Annotated, TypedDict, TypeVar, Generic
 
 import dxpy
 from dxpy import DXFile
-
-sys.path.append(os.path.dirname(__file__))
-from plot import process_sompy_data, plot_snv_recall
-from docker_utils import run_sompy
+from contaminant_detector.plot import process_sompy_data, plot_snv_recall
+from contaminant_detector.docker_utils import run_sompy
 
 #### * ~ <3  T y p e   H i n t i n g  <3 ~ * ####
 
@@ -27,7 +25,6 @@ class SompyJobOutput(TypedDict):
 class SompyResults(TypedDict, Generic[T]):
     recall_plot: T
     sompy_csv: T
-
 
 #### * ~ <3  T h a n k s  <3 ~ * ####
 
@@ -65,7 +62,7 @@ def sompy(truth: dx_file_id, query: dx_file_id) -> SompyJobOutput:
 
 
 @dxpy.entry_point("aggregate")
-def aggregate(sompy_files) -> SompyResults[DXFile]:
+def aggregate(sompy_files: list[DXLink]) -> SompyResults[DXFile]:
     input_path = Path("/home/dnanexus/in/")
     input_path.mkdir(exist_ok=True)
     for sompy_file in sompy_files:
