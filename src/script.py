@@ -33,8 +33,7 @@ class SompyResults(TypedDict, Generic[T]):
 
 
 @dxpy.entry_point("main")
-def main(
-    contaminated_samples: list[DXLink], candidates: list[DXLink]) -> SompyResults[DXLink]:
+def main(contaminated_samples: list[DXLink], candidates: list[DXLink]) -> SompyResults[DXLink]:
     sompy_refs = []
     for truth in contaminated_samples:
         for query in candidates:
