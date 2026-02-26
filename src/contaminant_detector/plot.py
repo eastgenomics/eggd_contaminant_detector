@@ -47,7 +47,7 @@ def parse_sample_name(query: str) -> str:
     try:
         sample_name = re.findall(pattern, query)[0]
     except IndexError:
-        logging.warn(
+        logging.warning(
             f"Could not parse EPIC sample name from {query}; defaulting to full filename"
         )
         return query

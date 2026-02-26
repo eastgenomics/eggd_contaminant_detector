@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 
-import sys
-import os
+import tarfile
 from pathlib import Path
 from typing import Annotated, TypedDict, TypeVar, Generic
 
 import dxpy
 from dxpy import DXFile
 from contaminant_detector.plot import process_sompy_data, plot_snv_recall
-from contaminant_detector.docker_utils import run_sompy
+from contaminant_detector.sompy import run_sompy
 
 #### * ~ <3  T y p e   H i n t i n g  <3 ~ * ####
 
@@ -30,7 +29,7 @@ class SompyResults(TypedDict, Generic[T]):
 
 
 @dxpy.entry_point("main")
-def main(contaminated_samples: list[DXLink], candidates: list[DXLink]) -> SompyResults[DXLink]:
+def main(contaminated_samples: list[DXLink], candidates: list[DXLink], reference: DXLink) -> SompyResults[DXLink]:
     sompy_refs = []
     for truth in contaminated_samples:
         for query in candidates:
@@ -38,6 +37,7 @@ def main(contaminated_samples: list[DXLink], candidates: list[DXLink]) -> SompyR
                 fn_input={
                     "truth": truth["$dnanexus_link"],
                     "query": query["$dnanexus_link"],
+                    "reference": reference["$dnanexus_link"]
                 },
                 fn_name="sompy",
             )
@@ -50,13 +50,25 @@ def main(contaminated_samples: list[DXLink], candidates: list[DXLink]) -> SompyR
 
 
 @dxpy.entry_point("sompy")
-def sompy(truth: dx_file_id, query: dx_file_id) -> SompyJobOutput:
+def sompy(truth: dx_file_id, query: dx_file_id, reference: dx_file_id) -> SompyJobOutput:
     input_path = Path("/home/dnanexus/in")
-    input_path.mkdir(exist_ok=True)
+    sompy_image = Path("/image/").glob("*.tar.gz")
     vcfs = {vcf_id: dxpy.describe(vcf_id)["name"] for vcf_id in [truth, query]}
-    for vcf_id in vcfs:
-        dxpy.download_dxfile(vcf_id, filename=str(input_path / vcfs[vcf_id]))
-    sompy_output = run_sompy(vcfs[truth], vcfs[query], "mock-sompy:latest")
+    truth_vcf = input_path / Path(vcfs[truth])
+    query_vcf = input_path / Path(vcfs[query])
+    reference = input_path / Path("reference_fasta.tar.gz")
+    
+    input_path.mkdir(exist_ok=True)
+    dxpy.download_dxfile(vcfs[truth], filename=str(truth_vcf))
+    dxpy.download_dxfile(vcfs[query], filename=str(query_vcf))
+    dxpy.download_dxfile(reference, filename=str(reference))
+
+    with tarfile.open(reference) as tar:
+        tar.extractfile("genome.fa")
+    ref_genome = Path("genome.fa")
+    ref_genome.rename(input_path / ref_genome.name)
+
+    sompy_output = run_sompy(sompy_image, vcfs[truth], vcfs[query], ref_genome)
     stats_dxfile = dxpy.upload_local_file(str(sompy_output))
     return {"stats_csv": stats_dxfile}
 
