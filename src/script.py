@@ -40,7 +40,7 @@ class SompyResults(TypedDict, Generic[T]):
 def get_file_id(dx_link: DXLink) -> DXFileID:
     try:
         return dx_link["$dnanexus_link"]["id"]
-    except KeyError:
+    except TypeError:
         return dx_link["$dnanexus_link"]
 
 @dxpy.entry_point("main")
@@ -48,6 +48,9 @@ def main(contaminated_samples: list[DXLink], candidates: list[DXLink], reference
     sompy_refs = []
     for truth in contaminated_samples:
         for query in candidates:
+            print(truth)
+            print(query)
+            print(reference)
             sompy_job = dxpy.new_dxjob(
                 fn_input={
                     "query": get_file_id(query),
