@@ -2,7 +2,8 @@
 
 import tarfile
 from pathlib import Path
-from typing import Annotated, TypedDict, TypeVar, Generic
+
+from typing import NewType, TypedDict, Union, TypeVar, Generic
 
 import dxpy
 from dxpy import DXFile
@@ -11,9 +12,20 @@ from contaminant_detector.sompy import run_sompy
 
 #### * ~ <3  T y p e   H i n t i n g  <3 ~ * ####
 
-DX_ID_PATTERN = r"^file-[a-zA-Z0-9]{24}$"
-dx_file_id = Annotated[str, "DNAnexus File ID", DX_ID_PATTERN]
-DXLink = TypedDict("DXLink", {"$dnanexus_link": dx_file_id})
+DXFileID = NewType("DXFileID", str)
+DXProjectID = NewType("DXProjectID", str)
+
+class NestedLinkContent(TypedDict):
+    id: DXFileID
+    project: DXProjectID
+
+class FlatDXLink(TypedDict):
+    {"$dnanexus_link": DXFileID}
+
+class NestedDXLink(TypedDict):
+    {"$dnanexus_link": NestedLinkContent}
+
+DXLink = Union[FlatDXLink, NestedDXLink]
 T = TypeVar("T", DXFile, DXLink)
 
 class SompyJobOutput(TypedDict):
@@ -25,6 +37,11 @@ class SompyResults(TypedDict, Generic[T]):
 
 #### * ~ <3  T h a n k s  <3 ~ * ####
 
+def get_file_id(dx_link: DXLink) -> DXFileID:
+    try:
+        return dx_link["$dnanexus_id"]["id"]
+    except KeyError:
+        return dx_link["$dnanexus_id"]
 
 @dxpy.entry_point("main")
 def main(contaminated_samples: list[DXLink], candidates: list[DXLink], reference: DXLink) -> SompyResults[DXLink]:
@@ -33,9 +50,9 @@ def main(contaminated_samples: list[DXLink], candidates: list[DXLink], reference
         for query in candidates:
             sompy_job = dxpy.new_dxjob(
                 fn_input={
-                    "truth": truth["$dnanexus_link"],
-                    "query": query["$dnanexus_link"],
-                    "reference": reference["$dnanexus_link"]
+                    "query": get_file_id(query),
+                    "truth": get_file_id(truth),
+                    "reference": get_file_id(reference)
                 },
                 fn_name="sompy",
             )
@@ -46,9 +63,8 @@ def main(contaminated_samples: list[DXLink], candidates: list[DXLink], reference
         "recall_plot": agg_job.get_output_ref("recall_plot"),
     }
 
-
 @dxpy.entry_point("sompy")
-def sompy(truth: dx_file_id, query: dx_file_id, reference: dx_file_id) -> SompyJobOutput:
+def sompy(truth: DXFileID, query: DXFileID, reference: DXFileID) -> SompyJobOutput:
     input_path = Path("/home/dnanexus/in")
     input_path.mkdir(parents=True, exist_ok=True)
     sompy_image = next(Path("/image").glob("*.tar.gz")).resolve()
