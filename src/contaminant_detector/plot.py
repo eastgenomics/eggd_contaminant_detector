@@ -23,7 +23,7 @@ def process_sompy_data(
 
 def read_sompy_stats(path: Path, pattern: str) -> pd.DataFrame:
     files = path.glob(pattern)
-    df = pd.concat([read_sompy_df(file) for file in files])
+    df = pd.concat([read_sompy_df(f) for f in files])
     return df
 
 

@@ -21,6 +21,13 @@
       "optional": false,
       "label": "Candidates",
       "help": "Array of VCFs that are candidates for being a contamination source"
+    },
+    {
+      "name": "reference",
+      "class": "file",
+      "optional": false,
+      "label": "Reference genome tarball",
+      "help": "Tarball containing reference genome"
     }
   ],
   "outputSpec": [
@@ -45,7 +52,7 @@
   "runSpec": {
     "assetDepends": [
       {
-	"id": "record-J6K6jf848pGkz5GJpbPp0F5y"
+	"id": "record-J6Qj380475ZY7KkF605PF8kv"
       },
       {
 	"id": "record-J6KfPzQ48PFXB5GF6BbYyFY1"

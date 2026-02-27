@@ -16,10 +16,8 @@ dx_file_id = Annotated[str, "DNAnexus File ID", DX_ID_PATTERN]
 DXLink = TypedDict("DXLink", {"$dnanexus_link": dx_file_id})
 T = TypeVar("T", DXFile, DXLink)
 
-
 class SompyJobOutput(TypedDict):
     stats_csv: DXFile
-
 
 class SompyResults(TypedDict, Generic[T]):
     recall_plot: T
@@ -52,23 +50,17 @@ def main(contaminated_samples: list[DXLink], candidates: list[DXLink], reference
 @dxpy.entry_point("sompy")
 def sompy(truth: dx_file_id, query: dx_file_id, reference: dx_file_id) -> SompyJobOutput:
     input_path = Path("/home/dnanexus/in")
-    sompy_image = Path("/image/").glob("*.tar.gz")
-    vcfs = {vcf_id: dxpy.describe(vcf_id)["name"] for vcf_id in [truth, query]}
-    truth_vcf = input_path / Path(vcfs[truth])
-    query_vcf = input_path / Path(vcfs[query])
-    reference = input_path / Path("reference_fasta.tar.gz")
-    
-    input_path.mkdir(exist_ok=True)
-    dxpy.download_dxfile(vcfs[truth], filename=str(truth_vcf))
-    dxpy.download_dxfile(vcfs[query], filename=str(query_vcf))
-    dxpy.download_dxfile(reference, filename=str(reference))
-
-    with tarfile.open(reference) as tar:
-        tar.extractfile("genome.fa")
-    ref_genome = Path("genome.fa")
-    ref_genome.rename(input_path / ref_genome.name)
-
-    sompy_output = run_sompy(sompy_image, vcfs[truth], vcfs[query], ref_genome)
+    input_path.mkdir(parents=True, exist_ok=True)
+    sompy_image = next(Path("/image").glob("*.tar.gz")).resolve()
+    vcfs = {vcf_id: input_path / dxpy.describe(vcf_id)["name"] for vcf_id in [truth, query]}
+    dxpy.download_dxfile(truth, filename=str(vcfs[truth]))
+    dxpy.download_dxfile(query, filename=str(vcfs[query]))
+    ref_tar = input_path / "ref_genome.tar.gz"
+    dxpy.download_dxfile(reference, filename=str(ref_tar))
+    with tarfile.open(ref_tar) as tar:
+        tar.extract("genome.fa", path=input_path)
+    ref_fa = input_path / "genome.fa"
+    sompy_output = run_sompy(sompy_image, vcfs[truth], vcfs[query], ref_fa)
     stats_dxfile = dxpy.upload_local_file(str(sompy_output))
     return {"stats_csv": stats_dxfile}
 
@@ -78,14 +70,17 @@ def aggregate(sompy_files: list[DXLink]) -> SompyResults[DXFile]:
     input_path = Path("/home/dnanexus/in/")
     input_path.mkdir(exist_ok=True)
     for sompy_file in sompy_files:
-        sompy_id = sompy_file["$dnanexus_link"]
-        name = dxpy.describe(sompy_id)["name"]
-        dxpy.download_dxfile(sompy_id, filename=str(input_path / name))
-    agg_sompy_data = process_sompy_data(input_path)
+        fid = sompy_file["$dnanexus_link"]
+        file_dir = input_path / fid
+        file_dir.mkdir(parents=True, exist_ok=True)
+        file_name = dxpy.describe(fid)["name"]
+        dxpy.download_dxfile(fid, filename=str(file_dir / file_name))
+    agg_sompy_data = process_sompy_data(input_path, pattern = "**/*.stats.csv")
     recall_plot = plot_snv_recall(agg_sompy_data)
-    plot_dxfile = dxpy.upload_local_file(recall_plot)
-    sompy_dxfile = dxpy.upload_local_file(agg_sompy_data)
-    return {"recall_plot": plot_dxfile, "sompy_csv": sompy_dxfile}
+    return {
+        "recall_plot": dxpy.upload_local_file(recall_plot),
+        "sompy_csv": dxpy.upload_local_file(agg_sompy_data)
+    }
 
 
 if __name__ == "__main__":
