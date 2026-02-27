@@ -26,8 +26,14 @@
       "name": "reference",
       "class": "file",
       "optional": false,
-      "label": "Reference genome tarball",
-      "help": "Tarball containing reference genome"
+      "label": "Reference genome tarball or FASTA file",
+      "help": "Reference genome FASTA, or tarball containing reference genome and index. If submitting a tarball, please note that it must contain both the FASTA and its associated index. Additionally, if this option is selected, any input submitted to reference_index will be ignored."
+    },
+    {
+      "name": "reference_index",
+      "class": "file",
+      "optional": true,
+      "label": "Reference genome index - required if submitting a FASTA file to reference. If a tarball is submitted to reference, this argument will be ignored."
     }
   ],
   "outputSpec": [
