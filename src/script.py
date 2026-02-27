@@ -39,9 +39,9 @@ class SompyResults(TypedDict, Generic[T]):
 
 def get_file_id(dx_link: DXLink) -> DXFileID:
     try:
-        return dx_link["$dnanexus_id"]["id"]
+        return dx_link["$dnanexus_link"]["id"]
     except KeyError:
-        return dx_link["$dnanexus_id"]
+        return dx_link["$dnanexus_link"]
 
 @dxpy.entry_point("main")
 def main(contaminated_samples: list[DXLink], candidates: list[DXLink], reference: DXLink) -> SompyResults[DXLink]:
@@ -71,15 +71,23 @@ def sompy(truth: DXFileID, query: DXFileID, reference: DXFileID) -> SompyJobOutp
     vcfs = {vcf_id: input_path / dxpy.describe(vcf_id)["name"] for vcf_id in [truth, query]}
     dxpy.download_dxfile(truth, filename=str(vcfs[truth]))
     dxpy.download_dxfile(query, filename=str(vcfs[query]))
-    ref_tar = input_path / "ref_genome.tar.gz"
-    dxpy.download_dxfile(reference, filename=str(ref_tar))
-    with tarfile.open(ref_tar) as tar:
-        tar.extract("genome.fa", path=input_path)
+    ref_name = dxpy.describe(reference)["name"]
+    ref_path: Path = input_path / ref_name
+    dxpy.download_dxfile(reference, filename=str(ref_path))
+    suffixes = [s.lower() for s in ref_path.suffixes]
     ref_fa = input_path / "genome.fa"
+    if ".tar" in suffixes or ".tgz" in suffixes:
+        with tarfile.open(ref_path) as tar:
+            fasta_exts = (".fa", ".fasta", ".fna", ".fa.gz", ".fasta.gz")
+            members = tar.getmembers()
+            fasta = next(m for m in members if m.name.lower().endswith(fasta_exts))
+            tar.extract(fasta, path=input_path)
+            (input_path / fasta.name).rename(ref_fa)
+    else:
+        ref_path.rename(ref_fa)
     sompy_output = run_sompy(sompy_image, vcfs[truth], vcfs[query], ref_fa)
     stats_dxfile = dxpy.upload_local_file(str(sompy_output))
     return {"stats_csv": stats_dxfile}
-
 
 @dxpy.entry_point("aggregate")
 def aggregate(sompy_files: list[DXLink]) -> SompyResults[DXFile]:
