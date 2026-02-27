@@ -37,6 +37,50 @@ class SompyResults(TypedDict, Generic[T]):
 
 #### * ~ <3  T h a n k s  <3 ~ * ####
 
+
+@dxpy.entry_point("main")
+def main(contaminated_samples: list[DXLink], candidates: list[DXLink], reference: DXLink, reference_index: DXLink=None) -> SompyResults[DXLink]:
+    """Orchestrates a batch of Sompy comparisons between sample sets.
+
+    This entry point performs an all-vs-all comparison between 'contaminated_samples' 
+    and 'candidates'. Each comparison is launched as a subjob. After all comparisons 
+    complete, an aggregation job is launched to summarize the results.
+
+    Args:
+        contaminated_samples: A list of DNAnexus links to 'truth' VCF files.
+        candidates: A list of DNAnexus links to 'query' VCF files.
+        reference: A DNAnexus link to the reference genome (fasta or tarball bundle).
+        reference_index: A DNANexus link to the reference genome index (required only if tarball bundle was not provided)
+
+    Returns:
+        A dictionary containing DNAnexus job-based references to the final 
+        aggregated CSV and recall plot.
+    """
+    ref_name = Path(dxpy.describe(get_file_id(reference))["name"])
+    if not ref_name.name.endswith(("tar", "tgz", "tar.gz")):
+        if not reference_index:
+            raise FileNotFoundError("Bare reference FASTA provided without associated index. "
+                                    "Please pass an index file to -ireference_index if using a raw FASTA file, "
+                                    "or submit a reference bundle tarball. Exiting...")
+    sompy_refs = []
+    for truth in contaminated_samples:
+        for query in candidates:
+            sompy_job = dxpy.new_dxjob(
+                fn_input={
+                    "query": get_file_id(query),
+                    "truth": get_file_id(truth),
+                    "reference": get_file_id(reference),
+                    "ref_index": get_file_id(reference_index) if reference_index else None
+                },
+                fn_name="sompy",
+            )
+            sompy_refs.append(sompy_job.get_output_ref("stats_csv"))
+    agg_job = dxpy.new_dxjob(fn_input={"sompy_files": sompy_refs}, fn_name="aggregate")
+    return {
+        "sompy_csv": agg_job.get_output_ref("sompy_csv"),
+        "recall_plot": agg_job.get_output_ref("recall_plot"),
+    }
+
 def get_file_id(dx_link: DXLink) -> DXFileID:
     """Extracts the raw file ID string from a DNAnexus link object.
 
@@ -54,46 +98,8 @@ def get_file_id(dx_link: DXLink) -> DXFileID:
     except TypeError:
         return dx_link["$dnanexus_link"]
 
-@dxpy.entry_point("main")
-def main(contaminated_samples: list[DXLink], candidates: list[DXLink], reference: DXLink) -> SompyResults[DXLink]:
-    """Orchestrates a batch of Sompy comparisons between sample sets.
-
-    This entry point performs an all-vs-all comparison between 'contaminated_samples' 
-    and 'candidates'. Each comparison is launched as a subjob. After all comparisons 
-    complete, an aggregation job is launched to summarize the results.
-
-    Args:
-        contaminated_samples: A list of DNAnexus links to 'truth' VCF files.
-        candidates: A list of DNAnexus links to 'query' VCF files.
-        reference: A DNAnexus link to the reference genome (fasta or tarball).
-
-    Returns:
-        A dictionary containing DNAnexus job-based references to the final 
-        aggregated CSV and recall plot.
-    """
-    sompy_refs = []
-    for truth in contaminated_samples:
-        for query in candidates:
-            print(truth)
-            print(query)
-            print(reference)
-            sompy_job = dxpy.new_dxjob(
-                fn_input={
-                    "query": get_file_id(query),
-                    "truth": get_file_id(truth),
-                    "reference": get_file_id(reference)
-                },
-                fn_name="sompy",
-            )
-            sompy_refs.append(sompy_job.get_output_ref("stats_csv"))
-    agg_job = dxpy.new_dxjob(fn_input={"sompy_files": sompy_refs}, fn_name="aggregate")
-    return {
-        "sompy_csv": agg_job.get_output_ref("sompy_csv"),
-        "recall_plot": agg_job.get_output_ref("recall_plot"),
-    }
-
 @dxpy.entry_point("sompy")
-def sompy(truth: DXFileID, query: DXFileID, reference: DXFileID) -> SompyJobOutput:
+def sompy(truth: DXFileID, query: DXFileID, reference: DXFileID, ref_index: DXFileID=None) -> SompyJobOutput:
     """Performs a single VCF comparison using Sompy.
 
     Downloads the truth, query, and reference files. If the reference is provided 
@@ -104,6 +110,7 @@ def sompy(truth: DXFileID, query: DXFileID, reference: DXFileID) -> SompyJobOutp
         truth: The DNAnexus file ID for the gold-standard VCF.
         query: The DNAnexus file ID for the VCF to be evaluated.
         reference: The DNAnexus file ID for the reference genome.
+        ref_index: The DNANexus file ID for the reference genome index
 
     Returns:
         A dictionary containing the uploaded DNAnexus file reference for 
@@ -119,23 +126,37 @@ def sompy(truth: DXFileID, query: DXFileID, reference: DXFileID) -> SompyJobOutp
     vcfs = {vcf_id: input_path / dxpy.describe(vcf_id)["name"] for vcf_id in [truth, query]}
     dxpy.download_dxfile(truth, filename=str(vcfs[truth]))
     dxpy.download_dxfile(query, filename=str(vcfs[query]))
-    ref_name = dxpy.describe(reference)["name"]
-    ref_path: Path = input_path / ref_name
-    dxpy.download_dxfile(reference, filename=str(ref_path))
-    suffixes = [s.lower() for s in ref_path.suffixes]
-    ref_fa = input_path / "genome.fa"
-    if ".tar" in suffixes or ".tgz" in suffixes:
-        with tarfile.open(ref_path) as tar:
-            fasta_exts = (".fa", ".fasta", ".fna", ".fa.gz", ".fasta.gz")
-            members = tar.getmembers()
-            fasta = next(m for m in members if m.name.lower().endswith(fasta_exts))
-            tar.extract(fasta, path=input_path)
-            (input_path / fasta.name).rename(ref_fa)
-    else:
-        ref_path.rename(ref_fa)
-    sompy_output = run_sompy(sompy_image, vcfs[truth], vcfs[query], ref_fa)
+    ref_path = download_reference(reference, ref_index, input_path)
+    sompy_output = run_sompy(sompy_image, vcfs[truth], vcfs[query], ref_path)
     stats_dxfile = dxpy.upload_local_file(str(sompy_output))
     return {"stats_csv": stats_dxfile}
+
+def download_reference(reference: DXFileID, ref_index: DXFileID=None, destination: Path=Path("/home/dnanexus/in")) -> Path:
+    ref_name = dxpy.describe(reference)["name"]
+    # I added the type hint to this variable because my IDE wasn't reading it as Path for
+    # some reason, despite the declaration in the function signature
+    ref_path: Path = destination / ref_name
+    dxpy.download_dxfile(reference, filename=str(ref_path))
+    if ref_path.name.endswith((".tar", ".tar.gz", ".tgz")):
+        with tarfile.open(ref_path) as tar:
+            members = tar.getmembers()
+            fasta_exts = (".fa", ".fasta", ".fna", ".fa.gz", ".fasta.gz")
+            index_exts = (".fai", ".gzi")
+            try:
+                fasta_m = next(m for m in members if m.name.lower().endswith(fasta_exts))
+                index_m = next(m for m in members if m.name.lower().endswith(index_exts))
+            except StopIteration:
+                raise FileNotFoundError(f"Tarball {ref_name} must contain both a FASTA and an index (.fai/.gzi)")
+            tar.extractall(members=[fasta_m, index_m], path=destination)
+            ref_path = destination / fasta_m.name
+        if ref_index:
+            print("WARNING: Tarball provided; ignoring the additional reference_index input.")
+    else:
+        if not ref_index:
+            raise ValueError(f"No index provided for raw FASTA: {ref_name}")
+        ref_index_name = dxpy.describe(ref_index)["name"]
+        dxpy.download_dxfile(ref_index, str(destination / ref_index_name))
+    return ref_path
 
 @dxpy.entry_point("aggregate")
 def aggregate(sompy_files: list[DXLink]) -> SompyResults[DXFile]:
