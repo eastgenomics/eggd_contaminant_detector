@@ -1,25 +1,8 @@
 import re
+import pandas as pd
 from pathlib import Path
 
-from . import docker_utils
-
-def clean_sample_name(vcf: Path) -> str:
-    """Extracts a clean sample name by stripping VCF-specific extensions.
-
-    Removes suffixes including .vcf, .gvcf, .g.vcf, and their .gz compressed 
-    variants from the filename.
-
-    Args:
-        vcf: The path to the VCF file.
-
-    Returns:
-        The filename as a string with the VCF extensions removed.
-        
-    Example:
-        >>> clean_sample_name(Path("sample1.g.vcf.gz"))
-        'sample1'
-    """
-    return re.sub(r'\.(?:g\.)?g?vcf(?:\.gz)?$', "", vcf.name)
+from egg_helpers import docker_utils
 
 def run_sompy(image: Path, truth: Path, query: Path, reference: Path) -> Path:
     """Runs the Sompy comparison tool inside a Docker container.
@@ -56,8 +39,8 @@ def run_sompy(image: Path, truth: Path, query: Path, reference: Path) -> Path:
 
     mounts = docker_utils.make_bindmounts((host_in, cont_in), (host_out, cont_out))
 
-    truth_sample = clean_sample_name(truth)
-    query_sample = clean_sample_name(query)
+    truth_sample = remove_vcf_extension(truth)
+    query_sample = remove_vcf_extension(query)
     samples = f"{truth_sample}_{query_sample}"
 
     command = [
@@ -79,3 +62,41 @@ def run_sompy(image: Path, truth: Path, query: Path, reference: Path) -> Path:
     stats_path = next(host_out.glob("*.stats.csv")).resolve()
     container.remove()
     return stats_path
+
+def parse_samples(df: pd.DataFrame) -> pd.DataFrame:
+    """Parses the 'sompycmd' column to extract and add sample names.
+
+    Sompy embeds the original file paths in the 's:w
+    ompycmd' column. This function
+    extracts the truth and query filenames and parses them into clean sample names.
+
+    Args:
+        df: A DataFrame containing a 'sompycmd' column.
+
+    Returns:
+        pd.DataFrame: The modified DataFrame with added 'truth' and 'query' columns.
+    """
+    vcf_pattern = r'[^\s]+\.(?:g\.)?g?vcf(?:\.gz)?'
+    matches = df["sompycmd"].str.findall(vcf_pattern)
+    df["truth"] = matches.str[0].apply(remove_vcf_extension)
+    df["query"] = matches.str[1].apply(remove_vcf_extension)
+    return df
+
+def remove_vcf_extension(vcf: Path|str) -> str:
+    """Extracts a clean sample name by stripping VCF-specific extensions.
+
+    Removes suffixes including .vcf, .gvcf, .g.vcf, and their .gz compressed 
+    variants from the filename.
+
+    Args:
+        vcf: The path to the VCF file.
+
+    Returns:
+        The filename as a string with the VCF extensions removed.
+        
+    Example:
+        >>> clean_sample_name(Path("sample1.g.vcf.gz"))
+        'sample1'
+    """
+    vcf = Path(vcf)
+    return re.sub(r'\.(?:g\.)?g?vcf(?:\.gz)?$', "", vcf.name)
