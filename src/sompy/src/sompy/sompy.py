@@ -30,19 +30,17 @@ def run_sompy(image: Path, truth: Path, query: Path, reference: Path) -> Path:
         The function automatically handles internal Docker path mapping, 
         translating host paths into '/in' and '/out' container paths.
     """
-    host_in = Path(truth).absolute().parent
-    host_out = Path("out").absolute()
-    host_out.mkdir(parents=True, exist_ok=True)
+    truth_sample = remove_vcf_extension(truth)
+    query_sample = remove_vcf_extension(query)
 
+    host_in = Path(truth).absolute().parent
+    host_out = Path(f"out_{truth_sample}_{query_sample}").absolute()
+    host_out.mkdir(parents=True, exist_ok=True)
     cont_in = Path("/in")
     cont_out = Path("/out")
 
     mounts = docker_utils.make_bindmounts((host_in, cont_in), (host_out, cont_out))
-
-    truth_sample = remove_vcf_extension(truth)
-    query_sample = remove_vcf_extension(query)
     samples = f"{truth_sample}_{query_sample}"
-
     command = [
         "/opt/hap.py/bin/som.py",
         "--no-count-unk",
