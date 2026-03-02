@@ -121,7 +121,10 @@ def gather(sompy_files: list[FlatDXLink]) -> SompyResults[DXFile]:
     recall_plot = plot.generate_comparison_plot(df=snvs, 
                                                 group_a="truth",
                                                 group_b="query",
-                                                metric="recall2")
+                                                metric="recall2",
+                                                # Average recall value between non-contaminated samples is 0.2
+                                                # so setting beginning of colour ramp-up to be double that
+                                                slope_params=(0.0, 0.4, 1.0))
     plot_path = Path("plot.png")
     recall_plot.savefig(plot_path)
     return {

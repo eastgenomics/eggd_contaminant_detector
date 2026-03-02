@@ -13,7 +13,7 @@ def generate_comparison_plot(df: pd.DataFrame,
                              group_b: str,
                              metric: str,
                              colour_scheme: str="YlOrRd",
-                             slope_params: Optional[Tuple[int, int, int]]=None,
+                             slope_params: Optional[Tuple[float, float, float]]=None,
                              figsize: Tuple[int, int]=(10, 6)) -> Figure:
     """
     If the data contains only one unique entry in group A, a barplot is generated.
@@ -73,7 +73,7 @@ def heatmap(data: pd.DataFrame,
             title: Optional[str],
             colour_scheme: str,
             figsize: Tuple[int, int],
-            slope_params: Optional[Tuple[int, int, int]]) -> Figure:
+            slope_params: Optional[Tuple[float, float, float]]) -> Figure:
     fig, ax = plt.subplots(figsize=figsize)
     hm_data = data.pivot(index=x, columns=y, values=z)
     params = {"cmap": colour_scheme,
