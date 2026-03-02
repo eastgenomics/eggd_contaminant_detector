@@ -53,13 +53,14 @@ def run(image: Path, truth: Path, query: Path, reference: Path) -> Path:
         str(cont_in / query.name)
         ]
     container = docker_utils.run_image_from_archive(image=image, command=command, mounts=mounts)
-    result = container.wait()
-    if result.get("StatusCode") != 0:
-        print(container.logs().decode())
-        raise RuntimeError(f"Sompy failed with exit code {result['StatusCode']}")
-    stats_path = next(host_out.glob("*.stats.csv")).resolve()
-    container.remove()
-    return stats_path
+    try:
+        result = container.wait()
+        if result.get("StatusCode") != 0:
+            print(container.logs().decode())
+            raise RuntimeError(f"Sompy failed with exit code {result['StatusCode']}")
+        return next(host_out.glob("*.stats.csv")).resolve()
+    finally:
+        container.remove()
 
 def parse_samples(df: pd.DataFrame) -> pd.DataFrame:
     """Parses the 'sompycmd' column to extract and add sample names.
