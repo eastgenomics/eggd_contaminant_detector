@@ -3,9 +3,9 @@
   "title": "eggd_contaminant_detector",
   "summary": "App to produce plots on contamination source",
   "dxapi": "1.0.0",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "properties": {
-    "githubRelease": "0.1.0"
+    "githubRelease": "1.0.0"
     },
   "inputSpec": [
     {
