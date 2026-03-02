@@ -52,6 +52,8 @@ def load_image(image: Path|str, timeout: int=300) -> Tuple[ImageID, DockerClient
     client.api.timeout = timeout
     with open(image, "rb") as f:
         loaded_images = client.images.load(f)
+    if not loaded_images:
+        raise ValueError(f"No images found in archive: {image}")
     image_id = loaded_images[0].id
     return image_id, client
 
