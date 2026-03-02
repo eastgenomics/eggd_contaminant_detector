@@ -9,7 +9,7 @@ from docker.types import Mount
 DIGEST_PATTERN = r"^sha256:[a-fA-F0-9]{64}$"
 ImageID = Annotated[str, "Docker SHA256 Digest", DIGEST_PATTERN]
 
-def run_image_from_archive(image: ImageID, command: list[str], mounts: list[Mount]) -> Container:
+def run_image_from_archive(image: Path|str, command: list[str], mounts: list[Mount]) -> Container:
     """Loads a Docker image from an archive and runs it as a detached container.
 
     This is a high-level wrapper that first ensures the image is available in 
@@ -33,7 +33,7 @@ def run_image_from_archive(image: ImageID, command: list[str], mounts: list[Moun
     )
     return container
 
-def load_image(image: Path|str) -> Tuple[ImageID, DockerClient]:
+def load_image(image: Path|str, timeout: int=300) -> Tuple[ImageID, DockerClient]:
     """Loads a gzipped Docker image archive into the local Docker daemon.
 
     Args:
@@ -48,8 +48,8 @@ def load_image(image: Path|str) -> Tuple[ImageID, DockerClient]:
         FileNotFoundError: If the image path does not exist.
         docker.errors.DockerException: If the Docker daemon is unreachable.
     """
-    client = docker.from_env(timeout=300)
-    client.api.timeout = 300
+    client = docker.from_env()
+    client.api.timeout = timeout
     with open(image, "rb") as f:
         loaded_images = client.images.load(f)
     image_id = loaded_images[0].id
