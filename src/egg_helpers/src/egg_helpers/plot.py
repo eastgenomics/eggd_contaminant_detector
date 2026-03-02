@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from typing import Tuple
+from typing import Tuple, Optional
 
 import pandas as pd
 import seaborn as sns
@@ -12,11 +12,8 @@ def generate_comparison_plot(df: pd.DataFrame,
                              group_a: str,
                              group_b: str,
                              metric: str,
-                             xlab: str,
-                             ylab: str,
-                             title: str,
                              colour_scheme: str="YlOrRd",
-                             slope_params: Tuple[int, int, int]=None,
+                             slope_params: Optional[Tuple[int, int, int]]=None,
                              figsize: Tuple[int, int]=(10, 6)) -> Figure:
     """
     If the data contains only one unique entry in group A, a barplot is generated.
@@ -34,18 +31,18 @@ def generate_comparison_plot(df: pd.DataFrame,
         fig = barplot(data=df,
                       x=group_b,
                       y=metric,
-                      xlab=xlab,
-                      ylab=ylab,
-                      title=title,
+                      xlab=group_b,
+                      ylab=metric,
+                      title=df[group_a].iloc[0],
                       figsize=figsize)
     else:
         fig = heatmap(data=df, 
                       x=group_a, 
                       y=group_b, 
                       z=metric, 
-                      xlab=xlab,
-                      ylab=ylab,
-                      title=title,
+                      xlab=group_a,
+                      ylab=group_b,
+                      title=None,
                       colour_scheme=colour_scheme,
                       slope_params=slope_params,
                       figsize=figsize)
@@ -73,20 +70,21 @@ def heatmap(data: pd.DataFrame,
             z: str,
             xlab: str,
             ylab: str,
-            title: str,
+            title: Optional[str],
             colour_scheme: str,
             figsize: Tuple[int, int],
-            slope_params: Tuple[int, int, int]) -> Figure:
+            slope_params: Optional[Tuple[int, int, int]]) -> Figure:
     fig, ax = plt.subplots(figsize=figsize)
     hm_data = data.pivot(index=x, columns=y, values=z)
+    params = {"cmap": colour_scheme,
+              "annot": True,
+              "fmt": ".3f",
+              "ax": ax}
     if slope_params:
-        if len(slope_params) == 3:
-            norm = TwoSlopeNorm(vmin=slope_params[0], vcenter=slope_params[1], vmax=slope_params[2])
-            sns.heatmap(hm_data, annot=True, fmt=".3f", norm=norm, cmap=colour_scheme, ax=ax)
-        else:
-            raise TypeError("wrong slope parameter format. It's a 3-tuple of vmin, vcenter and vmax.")
-    else:
-        sns.heatmap(hm_data, annot=True, fmt=".3f", cmap=colour_scheme, ax=ax)
+        if len(slope_params) < 3:
+            raise TypeError(f"Malformed argument to `slope_params`; expected 3-tuple, got {slope_params}")
+        params["norm"] = TwoSlopeNorm(vmin=slope_params[0], vcenter=slope_params[1], vmax=slope_params[2])
+    sns.heatmap(hm_data, **params)
     ax.set_xlabel(xlab)
     ax.set_ylabel(ylab)
     ax.set_title(title)
