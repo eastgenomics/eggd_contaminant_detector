@@ -2,6 +2,7 @@ import tarfile
 from pathlib import Path
 from typing import Optional
 
+import pandas as pd
 import dxpy
 from .types import DXFileID, DXLink
 
@@ -48,6 +49,20 @@ def get_file_id(dx_link: DXLink) -> DXFileID:
         return dx_link["$dnanexus_link"]["id"]
     except TypeError:
         return dx_link["$dnanexus_link"]
+
+def read_csvs(path: Path, pattern: str) -> pd.DataFrame:
+    """Discovers and concatenates all CSV files in a path.
+
+    Args:
+        path: Path object pointing to the directory to search.
+        pattern: Glob pattern to match files.
+
+    Returns:
+        pd.DataFrame: A single DataFrame containing data from all matched files.
+    """
+    files = path.glob(pattern)
+    df = pd.concat([pd.read_csv(f) for f in files])
+    return df
 
 def shorten(name: str) -> str:
     """Extracts the 2nd and 3rd fields from the EPIC name so that they'll fit on a plot. Returns the input
