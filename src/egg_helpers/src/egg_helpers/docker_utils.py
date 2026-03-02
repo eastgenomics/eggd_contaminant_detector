@@ -7,12 +7,8 @@ from docker import DockerClient
 from docker.models.containers import Container
 from docker.types import Mount
 
-#### * ~ <3  T y p e   H i n t i n g  <3 ~ * ####
-
 DIGEST_PATTERN = r"^sha256:[a-fA-F0-9]{64}$"
 ImageID = Annotated[str, "Docker SHA256 Digest", DIGEST_PATTERN]
-
-#### * ~ <3  T h a n k s  <3 ~ * ####
 
 def run_image_from_archive(image: ImageID, command: list[str], mounts: list[Mount]) -> Container:
     """Loads a Docker image from an archive and runs it as a detached container.
