@@ -31,7 +31,7 @@ def test_load_image(mock_docker: MagicMock, tmp_path: Path) -> None:
     mock_image.id = "sha256:1234567890abcdef"
     mock_docker.images.load.return_value = [mock_image]
 
-    img_id, client = load_image(fake_img)
+    img_id, _client = load_image(fake_img)
 
     assert img_id == "sha256:1234567890abcdef"
     mock_docker.images.load.assert_called_once()
