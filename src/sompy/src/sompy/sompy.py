@@ -4,7 +4,7 @@ from pathlib import Path
 
 from egg_helpers import docker_utils
 
-def run_sompy(image: Path, truth: Path, query: Path, reference: Path) -> Path:
+def run(image: Path, truth: Path, query: Path, reference: Path) -> Path:
     """Runs the Sompy comparison tool inside a Docker container.
 
     Sets up bind mounts between the host and the container, maps file paths 
