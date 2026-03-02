@@ -1,4 +1,3 @@
-import gzip
 from pathlib import Path
 from typing import Annotated, Tuple
 
@@ -49,8 +48,9 @@ def load_image(image: Path|str) -> Tuple[ImageID, DockerClient]:
         FileNotFoundError: If the image path does not exist.
         docker.errors.DockerException: If the Docker daemon is unreachable.
     """
-    client = docker.from_env()
-    with gzip.open(image, "rb") as f:
+    client = docker.from_env(timeout=300)
+    client.api.timeout = 300
+    with open(image, "rb") as f:
         loaded_images = client.images.load(f)
     image_id = loaded_images[0].id
     return image_id, client

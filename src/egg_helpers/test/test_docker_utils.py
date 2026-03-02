@@ -23,7 +23,6 @@ def test_make_bindmount() -> None:
     assert Path(mount["Source"]).is_absolute()
 
 def test_load_image(mock_docker: MagicMock, tmp_path: Path) -> None:
-    # Setup: Create a fake gzip file so gzip.open doesn't fail
     fake_img = tmp_path / "test_image.tar.gz"
     fake_img.write_bytes(b"not-really-gzip-data")
     
