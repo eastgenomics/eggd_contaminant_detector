@@ -32,9 +32,7 @@ def test_load_image(mock_docker: MagicMock, tmp_path: Path) -> None:
     mock_image.id = "sha256:1234567890abcdef"
     mock_docker.images.load.return_value = [mock_image]
 
-    # We must mock gzip.open because we wrote plain text in fake_img, not real gzip
-    with patch("gzip.open", MagicMock()):
-        img_id, client = load_image(fake_img)
+    img_id, client = load_image(fake_img)
 
     assert img_id == "sha256:1234567890abcdef"
     mock_docker.images.load.assert_called_once()
