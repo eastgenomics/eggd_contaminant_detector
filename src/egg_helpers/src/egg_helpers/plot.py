@@ -81,7 +81,7 @@ def heatmap(data: pd.DataFrame,
               "fmt": ".3f",
               "ax": ax}
     if slope_params:
-        if len(slope_params) < 3:
+        if len(slope_params) != 3:
             raise TypeError(f"Malformed argument to `slope_params`; expected 3-tuple, got {slope_params}")
         params["norm"] = TwoSlopeNorm(vmin=slope_params[0], vcenter=slope_params[1], vmax=slope_params[2])
     sns.heatmap(hm_data, **params)
