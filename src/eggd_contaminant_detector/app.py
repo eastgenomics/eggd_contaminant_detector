@@ -6,7 +6,7 @@ from typing import Optional
 import dxpy
 from dxpy import DXFile
 from sompy import sompy
-from egg_helpers import aggregate, plot
+from egg_helpers import plot
 
 from . import utils
 from .types import DXLink, FlatDXLink, DXFileID, SompyJobOutput, SompyResults
