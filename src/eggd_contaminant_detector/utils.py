@@ -22,6 +22,11 @@ def download_reference(reference: DXFileID, ref_index: Optional[DXFileID]=None, 
                 index_m = next(m for m in members if m.name.lower().endswith(index_exts))
             except StopIteration:
                 raise FileNotFoundError(f"Tarball {ref_name} must contain both a FASTA and an index (.fai/.gzi)")
+            destination_root = destination.resolve()
+            for member in (fasta_m, index_m):
+                member_path = (destination_root / member.name).resolve()
+                if not member_path.is_relative_to(destination_root):
+                    raise FileNotFoundError(f"Unsafe path in tarball member: {member.name}")
             tar.extractall(members=[fasta_m, index_m], path=destination)
             ref_path = destination / fasta_m.name
         if ref_index:
