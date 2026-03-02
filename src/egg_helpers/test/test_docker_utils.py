@@ -1,11 +1,12 @@
 import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+from typing import Generator
 from docker.types import Mount
 from egg_helpers.docker_utils import load_image, run_image_from_archive, make_bindmount
 
 @pytest.fixture
-def mock_docker() -> MagicMock:
+def mock_docker() -> Generator[MagicMock, None, None]:
     """Mocks the entire docker-py client."""
     with patch("docker.from_env") as mock_env:
         mock_client = MagicMock()
