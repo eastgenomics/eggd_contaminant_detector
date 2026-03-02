@@ -55,7 +55,7 @@ def main(contaminated_samples: list[DXLink], candidates: list[DXLink], reference
         "recall_plot": agg_job.get_output_ref("recall_plot"),
     }
 
-@dxpy.entry_point("sompy")
+@dxpy.entry_point("run_sompy")
 def run_sompy(truth: DXFileID, query: DXFileID, reference: DXFileID, ref_index: Optional[DXFileID]=None) -> SompyJobOutput:
     """Performs a single VCF comparison using Sompy.
 
@@ -88,7 +88,7 @@ def run_sompy(truth: DXFileID, query: DXFileID, reference: DXFileID, ref_index: 
     stats_dxfile = dxpy.upload_local_file(str(sompy_output))
     return {"stats_csv": stats_dxfile}
 
-@dxpy.entry_point("aggregate")
+@dxpy.entry_point("gather")
 def gather(sompy_files: list[FlatDXLink]) -> SompyResults[DXFile]:
     """Aggregates multiple Sompy result files into a summary CSV and plot.
 
