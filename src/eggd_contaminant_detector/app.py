@@ -8,8 +8,8 @@ from dxpy import DXFile
 from sompy import sompy
 from egg_helpers import plot
 
-from . import utils
-from .types import DXLink, FlatDXLink, DXFileID, SompyJobOutput, SompyResults
+from eggd_contaminant_detector import utils
+from eggd_contaminant_detector.types import DXLink, FlatDXLink, DXFileID, SompyJobOutput, SompyResults
 
 ### Entrypoints ###
 @dxpy.entry_point("main")
