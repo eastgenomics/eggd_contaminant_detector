@@ -27,13 +27,21 @@
       "class": "file",
       "optional": false,
       "label": "Reference genome tarball or FASTA file",
-      "help": "Reference genome FASTA, or tarball containing reference genome and index. If submitting a tarball, please note that it must contain both the FASTA and its associated index. Additionally, if this option is selected, any input submitted to reference_index will be ignored."
+      "patterns": [
+        ".fa",
+        ".tar.gz"
+      ],
+      "help": "Reference genome FASTA, or compressed archive (i.e. a tarball) containing reference genome and index. If submitting a tarball, please note that it must contain both the FASTA and its associated index. Additionally, if this option is selected, any input submitted to reference_index will be ignored."
     },
     {
       "name": "reference_index",
       "class": "file",
       "optional": true,
-      "label": "Reference genome index - required if submitting a FASTA file to reference. If a tarball is submitted to reference, this argument will be ignored."
+      "label": "Reference genome index",
+      "patterns": [
+        ".fai"
+      ],
+      "help": "Required if submitting a standalone FASTA file, optional otherwise. If a tarball is provided, this argument will be ignored."
     }
   ],
   "outputSpec": [
@@ -51,17 +59,18 @@
       "class": "file",
       "label": "Recall plot",
       "patterns": [
-        "*.png", "*.html", "*.svg", "*.jpg", "*.jpeg"
-      ]
+        "*.png"
+      ],
+      "help": "Plot visualising recall per sample pairing. Will be represented as a barplot if 1 contaminated sample is submitted for investigation; otherwise, it will be a heatmap. Please note: if sample names are formatted by EMEE GLH EPIC convention, the shortened form of the names will be presented in the axes; that is, if the sample name is 123456789-26001Z0001-26NGSHO01-1234-U-12345678, the sample will be shown as 26001Z0001-26NGSHO01 in the plot. If the sample name does not match this convention, the full name is used."
     }
   ],
   "runSpec": {
     "assetDepends": [
       {
-	"id": "record-J6Xp1F04ZPjbbJYQjjX5vyGz"
+	        "id": "record-J6Xp1F04ZPjbbJYQjjX5vyGz"
       },
       {
-	"id": "record-J6KfPzQ48PFXB5GF6BbYyFY1"
+	        "id": "record-J6KfPzQ48PFXB5GF6BbYyFY1"
       }
     ],
     "timeoutPolicy": {
