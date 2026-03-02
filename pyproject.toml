@@ -27,6 +27,7 @@ dev = [
     "pytest>=8.0.0",
     "black>=24.0.0",
     "mypy>=1.8.0",
+    "pytest-cov",
     "types-docker",
     "pandas-stubs",
     "types-seaborn"
@@ -36,7 +37,7 @@ dev = [
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["script.py"]
+packages = ["src/eggd_contaminant_detector"]
 
 [tool.black]
 line-length = 88
@@ -50,3 +51,7 @@ disallow_untyped_defs = true
 
 [tool.pytest.ini_options]
 testpaths = ["test"]
+filterwarnings = [
+    "ignore:Use setlocale:DeprecationWarning:pytest_nunit"
+]
+

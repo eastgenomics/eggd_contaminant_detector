@@ -73,7 +73,7 @@
     "release": "24.04",
     "version": "0",
     "interpreter": "python3",
-    "file": "src/script.py"
+    "file": "src/eggd_contaminant_detector/app.py"
   },
   "developers":[
     "org-emee_1"
