@@ -122,8 +122,10 @@ def gather(sompy_files: list[FlatDXLink]) -> SompyResults[DXFile]:
                                                 group_a="truth",
                                                 group_b="query",
                                                 metric="recall2")
+    plot_path = Path("plot.png")
+    recall_plot.savefig(plot_path)
     return {
-        "recall_plot": dxpy.upload_local_file(recall_plot),
+        "recall_plot": dxpy.upload_local_file(str(plot_path)),
         "sompy_csv": dxpy.upload_local_file(str(agg_output))
     }
 
