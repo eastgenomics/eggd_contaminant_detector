@@ -64,8 +64,7 @@ def run(image: Path, truth: Path, query: Path, reference: Path) -> Path:
 def parse_samples(df: pd.DataFrame) -> pd.DataFrame:
     """Parses the 'sompycmd' column to extract and add sample names.
 
-    Sompy embeds the original file paths in the 's:w
-    ompycmd' column. This function
+    Sompy embeds the original file paths in the 'sompycmd' column. This function
     extracts the truth and query filenames and parses them into clean sample names.
 
     Args:
