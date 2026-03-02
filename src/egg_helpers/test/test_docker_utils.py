@@ -43,18 +43,15 @@ def test_run_image_from_archive(mock_docker):
     with patch("egg_helpers.docker_utils.load_image") as mock_load:
         mock_load.return_value = ("sha256:fake", mock_docker)
         
-        # Setup the mock container return
         mock_container = MagicMock()
         mock_docker.containers.run.return_value = mock_container
         
-        # Act
         container = run_image_from_archive(
             image="dummy.tar.gz",
             command=["ls"],
             mounts=[]
         )
         
-        # Assert
         mock_docker.containers.run.assert_called_once_with(
             image="sha256:fake",
             mounts=[],
