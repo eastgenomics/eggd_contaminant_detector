@@ -41,20 +41,27 @@ def test_triggers_barplot_correctly(barplot_df: pd.DataFrame) -> None:
 def test_triggers_heatmap_correctly(heatmap_df: pd.DataFrame) -> None:
     fig = generate_comparison_plot(
         heatmap_df, 
-        group_a="truth",
-        group_b="query", 
+        group_a="truth", # gets sent to xlab
+        group_b="query", # gets sent to ylab
         metric="recall"
     )
     ax = fig.axes[0]
-    
+
     # Heatmaps don't have patches; they have a QuadMesh in collections
     assert len(ax.collections) > 0 
     
-    # Verify the axis labels match the data pivot
-    yticklabels = [t.get_text() for t in ax.get_yticklabels()]
-    assert "T1" in yticklabels
-    assert "T2" in yticklabels
+    # Get the actual strings from the plot axes
+    x_ticks = [t.get_text() for t in ax.get_xticklabels()]
+    y_ticks = [t.get_text() for t in ax.get_yticklabels()]
     
+    # Verify 'query' samples are horizontal (X)
+    assert any("Q" in str(t) for t in x_ticks), "Query samples should be on the horizontal X-axis"
+    # Verify 'truth' samples are vertical (Y)
+    assert any("T" in str(t) for t in y_ticks), "Truth samples should be on the vertical Y-axis"
+    
+    # Check that the label at the bottom says 'query'
+    assert ax.get_xlabel() == "query"
+
     plt.close(fig)
 
 def test_two_slope_norm_application(heatmap_df: pd.DataFrame) -> None:
