@@ -1,0 +1,35 @@
+name: Python Unit Tests
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      # We install subpackages first so the main package finds them locally
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ./src/egg_helpers
+          pip install ./src/sompy
+          # Install main package plus testing tools
+          pip install ".[dev]" 
+
+      - name: Run all tests
+        run: |
+          # pytest will find all test/ folders inside the src/ tree
+          pytest src/
