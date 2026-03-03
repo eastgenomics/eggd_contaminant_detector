@@ -15,14 +15,18 @@ The app is intended to help with determining the origin of cross-sample contamin
         Array of VCFs that are candidates for being a contamination source
 
     Reference genome tarball or FASTA file: -ireference=(file)
-          Reference genome FASTA, or tarball containing reference genome and index. If submitting a
-          tarball, please note that it must contain both the FASTA and its associated index.
-          Additionally, if this option is selected, any input submitted to reference_index will be
-          ignored.
+        Reference genome FASTA, or tarball containing reference genome and index. If submitting a
+        tarball, please note that it must contain both the FASTA and its associated index.
+        Additionally, if this option is selected, any input submitted to reference_index will be
+        ignored.
 
     Reference genome index: -ireference_index=(file)
-          Required if submitting a standalone FASTA file. If a compressed archive (tarball) is provided, 
-          this argument will be ignored.
+        Required if submitting a standalone FASTA file. If a compressed archive (tarball) is provided, 
+        this argument will be ignored.
+
+    panel-regions BED: [-ipanel_bed=(file)]
+        BED file containing panel-specific regions to restrict the analysis to. All reference
+        positions will be used otherwise.
 
 ## What are the outputs?
 
