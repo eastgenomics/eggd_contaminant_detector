@@ -1,0 +1,9 @@
+{
+  "name": "pkrusche-happy-image",
+  "title": "pkrusche/hap.py image",
+  "description": "Docker image containing hap.py toolkit",
+  "version": "0.3.9",
+  "distribution": "Ubuntu",
+  "instanceType": "mem2_ssd1_x4",
+  "release": "24.04"
+}

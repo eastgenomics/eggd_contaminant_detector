@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "contaminant-detector"
+version = "0.1.0"
+description = "A pipeline for running sompy in Docker and analyzing the resulting stats."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name = "Sophie Paul", email = "sophie.paul3@nhs.net" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+    "dxpy==0.405.0",
+    "egg_helpers @ {root:uri}/src/egg_helpers",
+    "sompy @ {root:uri}/src/sompy"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "black>=24.0.0",
+    "mypy>=1.8.0",
+    "pytest-cov",
+    "types-docker",
+    "pandas-stubs",
+    "types-seaborn"
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/eggd_contaminant_detector"]
+
+[tool.black]
+line-length = 88
+target-version = ['py312']
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+filterwarnings = [
+    "ignore:Use setlocale:DeprecationWarning:pytest_nunit"
+]
+

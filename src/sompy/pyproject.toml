@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sompy"
+version = "0.1.0"
+description = "Functions for running sompy in the hap.py docker container, and parsing the output"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name = "Sophie Paul", email = "sophie.paul3@nhs.net" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+    "pandas==3.0.1",
+    "egg-helpers"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "black>=24.0.0",
+    "mypy>=1.8.0",
+    "types-docker",
+    "pandas-stubs",
+    "types-seaborn"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sompy"]
+
+[tool.black]
+line-length = 88
+target-version = ['py312']
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["test"]

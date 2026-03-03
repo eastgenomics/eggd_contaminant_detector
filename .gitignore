@@ -1,0 +1,4 @@
+happy-image/resources
+python-deps/resources
+__pycache__
+*venv/
