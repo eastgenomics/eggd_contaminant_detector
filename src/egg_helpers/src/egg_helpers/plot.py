@@ -85,8 +85,11 @@ def heatmap(data: pd.DataFrame,
             raise TypeError(f"Malformed argument to `slope_params`; expected 3-tuple, got {slope_params}")
         params["norm"] = TwoSlopeNorm(vmin=slope_params[0], vcenter=slope_params[1], vmax=slope_params[2])
     sns.heatmap(hm_data, **params)
-    ax.set_xlabel(xlab)
-    ax.set_ylabel(ylab)
+    # In seaborn, "X" on a heatmap is actually the side where the y-axis would normally be, and
+    # "Y" is along the bottom where the x-axis would normally be. Since we want the longer data
+    # to be on the bottom, we need to swap the xlab and ylab around:
+    ax.set_xlabel(ylab)
+    ax.set_ylabel(xlab)
     ax.set_title(title)
     plt.xticks(rotation=45, ha='right')
     return fig
