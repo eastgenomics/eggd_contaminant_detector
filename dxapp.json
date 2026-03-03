@@ -42,6 +42,16 @@
         ".fai"
       ],
       "help": "Required if submitting a standalone FASTA file, optional otherwise. If a tarball is provided, this argument will be ignored."
+    },
+    {
+      "name": "panel_bed",
+      "class": "file",
+      "optional": true,
+      "label": "panel-regions BED",
+      "patterns": [
+        ".bed"
+      ],
+      "help": "BED file containing panel-specific regions to restrict the analysis to. All reference positions will be used otherwise."
     }
   ],
   "outputSpec": [

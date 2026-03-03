@@ -1,10 +1,11 @@
 import re
 import pandas as pd
 from pathlib import Path
+from typing import Optional
 
 from egg_helpers import docker_utils
 
-def run(image: Path, truth: Path, query: Path, reference: Path) -> Path:
+def run(image: Path, truth: Path, query: Path, reference: Path, panel_regions: Optional[Path]) -> Path:
     """Runs the Sompy comparison tool inside a Docker container.
 
     Sets up bind mounts between the host and the container, maps file paths 
@@ -17,6 +18,7 @@ def run(image: Path, truth: Path, query: Path, reference: Path) -> Path:
         truth: Path to the ground-truth VCF on the host.
         query: Path to the query/evaluation VCF on the host.
         reference: Path to the reference FASTA on the host.
+        high_conf_regions:
 
     Returns:
         The absolute path to the generated '.stats.csv' file on the host.
@@ -41,17 +43,26 @@ def run(image: Path, truth: Path, query: Path, reference: Path) -> Path:
 
     mounts = docker_utils.make_bindmounts((host_in, cont_in), (host_out, cont_out))
     samples = f"{truth_sample}_{query_sample}"
-    command = [
+
+    base_cmd = [
         "/opt/hap.py/bin/som.py",
         "--no-count-unk",
-        "--no-fixchr-truth", 
-        "--include-nonpass", 
-        "--no-fixchr-query", 
-        "-o", str(cont_out / samples), 
-        "--reference", str(cont_in / reference.relative_to(host_in)), 
+        "--no-fixchr-truth",
+        "--no-fixchr-query",
+        "--include-nonpass",
+        "-o", str(cont_out / samples)
+    ]
+    
+    if panel_regions:
+        cont_panel_path = cont_in / panel_regions.relative_to(host_in)
+        base_cmd += ["--restrict-regions", str(cont_panel_path)]
+
+    sompy_inputs = [
+        "--reference", str(cont_in / reference.relative_to(host_in)),
         str(cont_in / truth.name), 
         str(cont_in / query.name)
-        ]
+    ]
+    command = base_cmd + sompy_inputs
     container = docker_utils.run_image_from_archive(image=image, command=command, mounts=mounts)
     try:
         result = container.wait()
