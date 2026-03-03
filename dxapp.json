@@ -96,12 +96,12 @@
         "main": {
           "instanceType": "mem1_ssd1_v2_x2"
         },
-	"run_sompy": {
-	  "instanceType": "mem1_ssd1_v2_x4"
-	},
-	"gather": {
-	  "instanceType": "mem1_ssd1_v2_x2"
-	}
+        "run_sompy": {
+          "instanceType": "mem1_ssd1_v2_x4"
+        },
+        "gather": {
+          "instanceType": "mem1_ssd1_v2_x2"
+        }
       }
     }
   }
