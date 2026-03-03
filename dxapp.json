@@ -67,7 +67,7 @@
   "runSpec": {
     "assetDepends": [
       {
-	        "id": "record-J6Xp1F04ZPjbbJYQjjX5vyGz"
+	        "id": "record-J6YGfP84xFXVqgY57z0ZYF59"
       },
       {
 	        "id": "record-J6KfPzQ48PFXB5GF6BbYyFY1"
@@ -96,12 +96,12 @@
         "main": {
           "instanceType": "mem1_ssd1_v2_x2"
         },
-	      "run_sompy": {
-	        "instanceType": "mem1_ssd1_v2_x4"
-	      },
-	      "gather": {
-	        "instanceType": "mem1_ssd1_v2_x2"
-	      }
+	"run_sompy": {
+	  "instanceType": "mem1_ssd1_v2_x4"
+	},
+	"gather": {
+	  "instanceType": "mem1_ssd1_v2_x2"
+	}
       }
     }
   }
