@@ -30,7 +30,8 @@ def test_run_sompy_success(mock_utils: MagicMock, tmp_path: Path, monkeypatch: p
     truth = tmp_path / "truth_set.vcf"
     query = tmp_path / "query_set.vcf"
     ref = tmp_path / "genome.fa"
-    for f in [truth, query, ref]: f.touch()
+    bed = tmp_path / "regions.bed"
+    for f in [truth, query, ref, bed]: f.touch()
 
     # Mock Docker interactions
     mock_container = MagicMock()
@@ -45,7 +46,7 @@ def test_run_sompy_success(mock_utils: MagicMock, tmp_path: Path, monkeypatch: p
     stats_file.touch()
 
     # Act
-    result = run(Path("docker_image.tar.gz"), truth, query, ref)
+    result = run(Path("docker_image.tar.gz"), truth, query, ref, bed)
 
     # Assert
     assert result == stats_file.resolve()
@@ -61,7 +62,8 @@ def test_run_sompy_failure(mock_utils: MagicMock, tmp_path: Path, monkeypatch: p
     truth = tmp_path / "truth.vcf"
     query = tmp_path / "query.vcf"
     ref = tmp_path / "ref.fa"
-    for f in [truth, query, ref]: f.touch()
+    bed = tmp_path / "regions.bed"
+    for f in [truth, query, ref, bed]: f.touch()
 
     # Simulate a crash (StatusCode 1)
     mock_container = MagicMock()
@@ -70,4 +72,4 @@ def test_run_sompy_failure(mock_utils: MagicMock, tmp_path: Path, monkeypatch: p
     mock_utils.run_image_from_archive.return_value = mock_container
 
     with pytest.raises(RuntimeError, match="Sompy failed with exit code 1"):
-        run(Path("img.gz"), truth, query, ref)
+        run(Path("img.gz"), truth, query, ref, bed)

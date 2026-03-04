@@ -13,7 +13,7 @@ from eggd_contaminant_detector.types import DXLink, FlatDXLink, DXFileID, SompyJ
 
 ### Entrypoints ###
 @dxpy.entry_point("main")
-def main(contaminated_samples: list[DXLink], candidates: list[DXLink], reference: DXLink, reference_index: Optional[DXLink]=None) -> SompyResults[DXLink]:
+def main(contaminated_samples: list[DXLink], candidates: list[DXLink], reference: DXLink, reference_index: Optional[DXLink]=None, panel_bed: Optional[DXLink]=None) -> SompyResults[DXLink]:
     """Orchestrates a batch of Sompy comparisons between sample sets.
 
     This entry point performs an all-vs-all comparison between 'contaminated_samples' 
@@ -44,7 +44,8 @@ def main(contaminated_samples: list[DXLink], candidates: list[DXLink], reference
                     "query": utils.get_file_id(query),
                     "truth": utils.get_file_id(truth),
                     "reference": utils.get_file_id(reference),
-                    "ref_index": utils.get_file_id(reference_index) if reference_index else None
+                    "ref_index": utils.get_file_id(reference_index) if reference_index else None,
+                    "panel_bed": utils.get_file_id(panel_bed) if panel_bed else None
                 },
                 fn_name="run_sompy",
             )
@@ -56,7 +57,7 @@ def main(contaminated_samples: list[DXLink], candidates: list[DXLink], reference
     }
 
 @dxpy.entry_point("run_sompy")
-def run_sompy(truth: DXFileID, query: DXFileID, reference: DXFileID, ref_index: Optional[DXFileID]=None) -> SompyJobOutput:
+def run_sompy(truth: DXFileID, query: DXFileID, reference: DXFileID, ref_index: Optional[DXFileID]=None, panel_bed: Optional[DXFileID]=None) -> SompyJobOutput:
     """Performs a single VCF comparison using Sompy.
 
     Downloads the truth, query, and reference files. If the reference is provided 
@@ -84,7 +85,11 @@ def run_sompy(truth: DXFileID, query: DXFileID, reference: DXFileID, ref_index: 
     dxpy.download_dxfile(truth, filename=str(vcfs[truth]))
     dxpy.download_dxfile(query, filename=str(vcfs[query]))
     ref_path = utils.download_reference(reference, ref_index, input_path)
-    sompy_output = sompy.run(sompy_image, vcfs[truth], vcfs[query], ref_path)
+    panel_path = None
+    if panel_bed:
+        panel_path = input_path / "panel.bed"
+        dxpy.download_dxfile(panel_bed, filename=str(panel_path))
+    sompy_output = sompy.run(sompy_image, vcfs[truth], vcfs[query], ref_path, panel_path)
     stats_dxfile = dxpy.upload_local_file(str(sompy_output))
     return {"stats_csv": stats_dxfile}
 
