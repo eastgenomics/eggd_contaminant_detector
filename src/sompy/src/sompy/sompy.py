@@ -18,7 +18,7 @@ def run(image: Path, truth: Path, query: Path, reference: Path, panel_regions: O
         truth: Path to the ground-truth VCF on the host.
         query: Path to the query/evaluation VCF on the host.
         reference: Path to the reference FASTA on the host.
-        high_conf_regions:
+        panel_regions: Path to the panel-regions BED on the host.
 
     Returns:
         The absolute path to the generated '.stats.csv' file on the host.
