@@ -31,7 +31,7 @@ def test_run_sompy_success(mock_utils: MagicMock, tmp_path: Path, monkeypatch: p
     query = tmp_path / "query_set.vcf"
     ref = tmp_path / "genome.fa"
     bed = tmp_path / "regions.bed"
-    for f in [truth, query, ref]: f.touch()
+    for f in [truth, query, ref, bed]: f.touch()
 
     # Mock Docker interactions
     mock_container = MagicMock()
@@ -63,7 +63,7 @@ def test_run_sompy_failure(mock_utils: MagicMock, tmp_path: Path, monkeypatch: p
     query = tmp_path / "query.vcf"
     ref = tmp_path / "ref.fa"
     bed = tmp_path / "regions.bed"
-    for f in [truth, query, ref]: f.touch()
+    for f in [truth, query, ref, bed]: f.touch()
 
     # Simulate a crash (StatusCode 1)
     mock_container = MagicMock()
