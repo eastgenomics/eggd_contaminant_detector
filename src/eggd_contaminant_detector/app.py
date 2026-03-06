@@ -118,14 +118,14 @@ def gather(sompy_files: list[FlatDXLink]) -> SompyResults[DXFile]:
         dxpy.download_dxfile(fid, filename=str(file_dir / file_name))
     agg_sompy_data = utils.read_csvs(input_path, pattern = "**/*.stats.csv")
     agg_sompy_data = sompy.parse_samples(agg_sompy_data)
-    agg_sompy_data["query"] = agg_sompy_data["query"].apply(utils.shorten)
-    agg_sompy_data["truth"] = agg_sompy_data["truth"].apply(utils.shorten)
+    agg_sompy_data["candidates"] = agg_sompy_data["query"].apply(utils.shorten)
+    agg_sompy_data["contaminated_samples"] = agg_sompy_data["truth"].apply(utils.shorten)
     agg_output = Path("agg_sompy_data.csv")
     agg_sompy_data.to_csv(agg_output)
     snvs = agg_sompy_data[agg_sompy_data["type"] == "SNVs"].copy()
     recall_plot = plot.generate_comparison_plot(df=snvs, 
-                                                group_a="truth",
-                                                group_b="query",
+                                                group_a="contaminated_samples",
+                                                group_b="candidates",
                                                 metric="recall2",
                                                 # Average recall value between non-contaminated samples is 0.2
                                                 # so setting beginning of colour ramp-up to be double that
