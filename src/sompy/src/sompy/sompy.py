@@ -1,11 +1,12 @@
 import re
 import pandas as pd
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
+from docker.types import Mount
 
 from egg_helpers import docker_utils
 
-def run(image: Path, truth: Path, query: Path, reference: Path, panel_regions: Optional[Path]) -> Path:
+def run(image: Path, truth: Path, query: Path, reference: Path, panel_regions: Optional[Path], out_dir: Optional[Path]=Path.cwd()) -> Path:
     """Runs the Sompy comparison tool inside a Docker container.
 
     Sets up bind mounts between the host and the container, maps file paths 
@@ -32,38 +33,10 @@ def run(image: Path, truth: Path, query: Path, reference: Path, panel_regions: O
         The function automatically handles internal Docker path mapping, 
         translating host paths into '/in' and '/out' container paths.
     """
-    truth_sample = remove_vcf_extension(truth)
-    query_sample = remove_vcf_extension(query)
-
-    host_in = Path(truth).absolute().parent
-    host_out = Path(f"out_{truth_sample}_{query_sample}").absolute()
-    host_out.mkdir(parents=True, exist_ok=True)
-    cont_in = Path("/in")
-    cont_out = Path("/out")
-
-    mounts = docker_utils.make_bindmounts((host_in, cont_in), (host_out, cont_out))
-    samples = f"{truth_sample}_{query_sample}"
-
-    base_cmd = [
-        "/opt/hap.py/bin/som.py",
-        "--no-count-unk",
-        "--no-fixchr-truth",
-        "--no-fixchr-query",
-        "--include-nonpass",
-        "-o", str(cont_out / samples)
-    ]
-    
-    if panel_regions:
-        cont_panel_path = cont_in / panel_regions.relative_to(host_in)
-        base_cmd += ["--restrict-regions", str(cont_panel_path)]
-
-    sompy_inputs = [
-        "--reference", str(cont_in / reference.relative_to(host_in)),
-        str(cont_in / truth.name), 
-        str(cont_in / query.name)
-    ]
-    command = base_cmd + sompy_inputs
-    container = docker_utils.run_image_from_archive(image=image, command=command, mounts=mounts)
+    mounts = make_sompy_mounts(in_dir=truth.absolute().parent, out_dir=out_dir)
+    host_out = Path(mounts[1]["Source"])
+    command = cmd(mounts, truth, query, reference, panel_regions)
+    container = docker_utils.run_from_archive(image=image, command=command, mounts=mounts)
     try:
         result = container.wait()
         if result.get("StatusCode") != 0:
@@ -72,6 +45,52 @@ def run(image: Path, truth: Path, query: Path, reference: Path, panel_regions: O
         return next(host_out.glob("*.stats.csv")).resolve()
     finally:
         container.remove()
+
+def make_sompy_mounts(in_dir: Path, out_dir: Path) -> Tuple[Mount, Mount]:
+    host_in = in_dir
+    cont_in = Path("/in")
+    host_out = out_dir
+    host_out.mkdir(parents=True, exist_ok=True)
+    cont_out = Path("/out")
+    mounts = docker_utils.make_bindmounts((host_in, cont_in), (host_out, cont_out))
+    return mounts
+
+def cmd(mounts: Tuple[Mount, Mount], truth: Path, query: Path, reference: Path, panel_regions: Optional[Path]):
+    host_in = Path(mounts[0]["Source"])
+    cont_in = Path(mounts[0]["Target"])
+    cont_out = Path(mounts[1]["Target"])
+
+    c_truth = cont_in / truth.relative_to(host_in)
+    c_query = cont_in / query.relative_to(host_in)
+    c_ref = cont_in / reference.relative_to(host_in)
+    if panel_regions:
+        c_panel = cont_in / panel_regions.relative_to(host_in)
+    else:
+        c_panel = None
+
+    command = _make_relative_cmd(c_truth, c_query, c_ref, cont_out, c_panel)
+    return command
+
+def _make_relative_cmd(truth: Path, query: Path, reference: Path, out_dir: Path, panel_regions: Optional[Path]) -> str:
+    truth_sample = remove_vcf_extension(truth)
+    query_sample = remove_vcf_extension(query)
+    samples = f"{truth_sample}_{query_sample}"
+    base_cmd = [
+        "/opt/hap.py/bin/som.py",
+        "--no-count-unk",
+        "--no-fixchr-truth",
+        "--no-fixchr-query",
+        "--include-nonpass",
+        "-o", str(out_dir / samples)
+    ]
+    if panel_regions:
+        base_cmd += ["--restrict-regions", str(panel_regions)]
+    sompy_inputs = [
+        "--reference", str(reference),
+        str(truth), 
+        str(query)
+    ]
+    return base_cmd + sompy_inputs
 
 def parse_samples(df: pd.DataFrame) -> pd.DataFrame:
     """Parses the 'sompycmd' column to extract and add sample names.
