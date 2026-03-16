@@ -1,5 +1,6 @@
 from pathlib import Path
-from typing import Annotated, Tuple
+from contextlib import contextmanager
+from typing import Annotated, Iterator, Tuple, Optional
 
 import docker
 from docker import DockerClient
@@ -9,7 +10,17 @@ from docker.types import Mount
 DIGEST_PATTERN = r"^sha256:[a-fA-F0-9]{64}$"
 ImageID = Annotated[str, "Docker SHA256 Digest", DIGEST_PATTERN]
 
-def run_image_from_archive(image: Path|str, command: list[str], mounts: list[Mount]) -> Container:
+@contextmanager
+def open_container(image: Path|str, mounts: Optional[list[Mount]]=None) -> Iterator[Container]:
+    """Starts a container and ensures it's killed/removed after the block."""
+    container = run_from_archive(image, command=["tail", "-f", "/dev/null"], mounts=mounts)
+    try:
+        yield container
+    finally:
+        container.stop()
+        container.remove()
+
+def run_from_archive(image: Path|str, command: Optional[list[str]]=None, mounts: Optional[list[Mount]]=None) -> Container:
     """Loads a Docker image from an archive and runs it as a detached container.
 
     This is a high-level wrapper that first ensures the image is available in 
@@ -24,13 +35,17 @@ def run_image_from_archive(image: Path|str, command: list[str], mounts: list[Mou
         A docker.models.containers.Container object in a detached state.
     """
     image_id, client = load_image(image)
-    container = client.containers.run(
-        image=image_id,
-        mounts=mounts,
-        command=command,
-        detach=True,
-        auto_remove=False,
-    )
+    kwargs = {
+        "image": image_id,
+        "detach": True,
+        "auto_remove": False
+    }
+    if command:
+        kwargs["command"] = command
+    if mounts:
+        kwargs["mounts"] = mounts
+
+    container = client.containers.run(**kwargs)
     return container
 
 def load_image(image: Path|str, timeout: int=300) -> Tuple[ImageID, DockerClient]:
