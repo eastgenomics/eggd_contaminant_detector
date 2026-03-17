@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import textwrap
 from pathlib import Path
 from typing import Optional
 
@@ -81,35 +82,37 @@ def run_sompy_batch(truths: list[DXLink], queries: list[DXLink], reference: DXLi
     ref_path = next((input_path / "reference").glob("*")).resolve()
     if ref_path.name.endswith((".tar", ".tar.gz", ".tgz")):
         utils.extract_ref_tar(ref_path, ref_path.parent)
+    else:
+        index_p = Path("/home/dnanexus/in/reference_index/").glob("*.fai*")
+        index = next(index_p)
+        index.rename(Path("/home/dnanexus/in/reference") / index.name)
     sompy_image = next(Path("/image").glob("*.tar.gz")).resolve()
     mounts = sompy.make_sompy_mounts(in_dir=input_path, out_dir=Path("/out"))
     with docker_utils.open_container(sompy_image, mounts) as container:
-        container.exec_run(cmd=["/bin/bash", "-c", sompy_heredoc()])
+        exit_code, output = container.exec_run(cmd=["/bin/bash", "-c", sompy_heredoc()])
+        print(output.decode())
+        if exit_code != 0:
+            raise RuntimeError(f"docker fail with exit code {exit_code}")
         stats_files = [dxpy.upload_local_file(csv) for csv in Path("/home/dnanexus/out/").glob("*.csv")]
     return {"stats_csvs": stats_files}
 
 def sompy_heredoc() -> str:
-    return """
+    script = textwrap.dedent("""
+        set -e
         TRUTH_VCFS=($(find /in/truths -type f -name "*.vcf.gz"))
         QUERY_VCFS=($(find /in/queries -type f -name "*.vcf.gz"))
-        REFERENCE=$(find /in/reference -type f -not -regex ".*\(fai\|gzi\)")
+        REFERENCE=$(find /in/reference -type f ! -name "*.fai" ! -name "*.gzi" | head -n 1)
         PANEL_BED=$( [ -d "/in/panel_bed" ] && find "/in/panel_bed" -type f -name "*.bed*" | head -n 1 )
 
         for TRUTH in "${TRUTH_VCFS[@]}"; do
             for QUERY in "${QUERY_VCFS[@]}"; do
                 T_NAME=$(basename "$TRUTH" .vcf.gz)
                 Q_NAME=$(basename "$QUERY" .vcf.gz)
-                
-                ARGS="--no-count-unk --no-fixchr-truth --no-fixchr-query --include-nonpass"
-                
-                if [ -n "$PANEL_BED" ]; then
-                    ARGS="$ARGS --restrict-regions $PANEL_BED"
-                fi
-
-                /opt/hap.py/bin/som.py $ARGS -o "/out/${T_NAME}_${Q_NAME}" --reference "$REFERENCE" "$TRUTH" "$QUERY"
+                /opt/hap.py/bin/som.py --no-count-unk -o "/out/${T_NAME}_${Q_NAME}" --reference "$REFERENCE" "$TRUTH" "$QUERY"
             done
         done
-    """
+    """).strip()
+    return script
 
 @dxpy.entry_point("run_sompy_pair")
 def run_sompy_pair(truth: DXFileID, query: DXFileID, reference: DXFileID, ref_index: Optional[DXFileID]=None, panel_bed: Optional[DXFileID]=None) -> SompyJobOutput:
