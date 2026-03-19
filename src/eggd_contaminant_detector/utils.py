@@ -1,27 +1,13 @@
 import tarfile
 from pathlib import Path
-from typing import Optional
+from typing import Tuple
+from docker.types import Mount
 
 import pandas as pd
 import dxpy
+from dxpy import DXJob
 from .types import DXFileID, DXLink
-
-def download_reference(reference: DXFileID, ref_index: Optional[DXFileID]=None, destination: Path=Path("/home/dnanexus/in")) -> Path:
-    ref_name = dxpy.describe(reference)["name"]
-    # I added the type hint to this variable because my IDE wasn't reading it as Path for
-    # some reason, despite the declaration in the function signature
-    ref_path: Path = destination / ref_name
-    dxpy.download_dxfile(reference, filename=str(ref_path))
-    if ref_path.name.endswith((".tar", ".tar.gz", ".tgz")):
-        ref_path = extract_ref_tar(ref_path, destination)
-        if ref_index:
-            print("WARNING: Tarball provided; ignoring the additional reference_index input.")
-    else:
-        if not ref_index:
-            raise ValueError(f"No index provided for raw FASTA: {ref_name}")
-        ref_index_name = dxpy.describe(ref_index)["name"]
-        dxpy.download_dxfile(ref_index, str(destination / ref_index_name))
-    return ref_path
+from sompy import sompy
 
 def extract_ref_tar(ref_path: Path, destination: Path) -> Path:
     destination.mkdir(parents=True, exist_ok=True)
@@ -44,6 +30,35 @@ def extract_ref_tar(ref_path: Path, destination: Path) -> Path:
             member.name = Path(member.name).name
         tar.extractall(members=[fasta_m, index_m], path=destination_root)
         return destination_root / fasta_m.name
+
+def setup_sompy() -> Tuple[Path, list[Mount, Mount]]:
+    dxpy.download_all_inputs(parallel=True)
+    input_path = Path("/home/dnanexus/in")
+    ref_dir = input_path / "reference"
+    ref_path = next(ref_dir.glob("*")).resolve()
+    if ref_path.name.endswith((".tar", ".tar.gz", ".tgz")):
+        ref_path = extract_ref_tar(ref_path, ref_dir)
+    else:
+        index_path = Path("/home/dnanexus/in/ref_index")
+        indices = [p for p in index_path.glob("*") if p.suffix in {".fai", ".gzi"}]
+        if indices:
+            for idx in indices:
+                idx.rename(ref_dir / idx.name)
+    sompy_image = next(Path("/image").glob("*happy*.tar.gz")).resolve()
+    bcftools_image = next(Path("/image").glob("*bcftools*")).resolve()
+    mounts = sompy.make_sompy_mounts(in_dir=input_path, out_dir=Path("/home/dnanexus/out"))
+    return sompy_image, bcftools_image, mounts
+
+def new_subjob(fn_name: str, inputs: dict[str, str], priority: str) -> DXJob:
+    # using our own wrapper instead of dxpy.new_dxjob because new_dxjob doesn't
+    # support setting the job priority
+    payload = {
+        "function": fn_name,
+        "input": inputs,
+        "priority": priority
+    }
+    response = dxpy.api.job_new(payload)
+    return dxpy.DXJob(response["id"])
 
 def get_file_id(dx_link: DXLink) -> DXFileID:
     """Extracts the raw file ID string from a DNAnexus link object.
@@ -90,3 +105,12 @@ def shorten(name: str) -> str:
     if len(parts) >= 3:
         return f"{parts[1]}-{parts[2]}"
     return name
+
+def get_single_file(path: Path, pattern: str = "*", exclude: set = None) -> Path:
+    files = list(path.rglob(pattern))
+    if exclude:
+        files = [f for f in files if "".join(f.suffixes) not in exclude]
+    if not files:
+        print(f"No files matching {pattern} found in {path}")
+        return None
+    return files[0]

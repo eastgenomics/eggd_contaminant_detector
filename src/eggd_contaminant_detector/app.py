@@ -1,25 +1,21 @@
 #!/usr/bin/env python3
 
-import textwrap
 from pathlib import Path
 from typing import Optional
 
 import dxpy
-from dxpy import DXFile
 from sompy import sompy
 from egg_helpers import plot, docker_utils
+from eggd_contaminant_detector import utils, heredocs
+from eggd_contaminant_detector.types import DXLink
 
-from eggd_contaminant_detector import utils
-from eggd_contaminant_detector.types import DXLink, FlatDXLink, DXFileID, SompyJobOutput, SompyResults
-
-### Entrypoints ###
 @dxpy.entry_point("main")
 def main(contaminated_samples: list[DXLink],
          candidates: list[DXLink],
          reference: DXLink,
          reference_index: Optional[DXLink]=None,
          panel_bed: Optional[DXLink]=None,
-         parallel: bool=True) -> SompyResults[DXLink]:
+         parallel: bool=True) -> dict[str, DXLink]:
     """Orchestrates a batch of Sompy comparisons between sample sets.
 
     This entry point performs an all-vs-all comparison between 'contaminated_samples' 
@@ -36,123 +32,86 @@ def main(contaminated_samples: list[DXLink],
         A dictionary containing DNAnexus job-based references to the final 
         aggregated CSV and recall plot.
     """
-    ref_name = Path(dxpy.describe(utils.get_file_id(reference))["name"])
-    if not ref_name.name.endswith(("tar", "tgz", "tar.gz")):
+    ref_fid = utils.get_file_id(reference)
+    ref_file = Path(dxpy.describe(ref_fid)["name"])
+    if not ref_file.name.endswith(("tar", "tgz", "tar.gz")):
         if not reference_index:
             raise FileNotFoundError("Bare reference FASTA provided without associated index. "
                                     "Please pass an index file to -ireference_index if using a raw FASTA file, "
                                     "or submit a reference bundle tarball. Exiting...")
+        
+    parent_job = dxpy.DXJob(dxpy.JOB_ID)
+    priority = parent_job.describe().get('priority', 'normal')
+
+    static_inputs = {
+        "reference": reference,
+        "ref_index": reference_index,
+        "panel_bed": panel_bed
+    }
+
     if parallel:
         sompy_refs = []
         for truth in contaminated_samples:
             for query in candidates:
-                sompy_job = dxpy.new_dxjob(
-                    fn_input={
-                        "truth": utils.get_file_id(truth),
-                        "query": utils.get_file_id(query),
-                        "reference": utils.get_file_id(reference),
-                        "ref_index": utils.get_file_id(reference_index) if reference_index else None,
-                        "panel_bed": utils.get_file_id(panel_bed) if panel_bed else None
-                    },
-                    fn_name="run_sompy_pair",
-                )
+                inputs = {
+                    "truth": truth,
+                    "query": query,
+                    **static_inputs
+                }
+                sompy_job = utils.new_subjob(fn_name="run_sompy_pair", inputs=inputs, priority=priority)
                 sompy_refs.append(sompy_job.get_output_ref("stats_csv"))
     else:
-        sompy_job = dxpy.new_dxjob(
-            fn_input={
+        sompy_job = utils.new_subjob(
+            fn_name="run_sompy_batch",
+            inputs={
                 "truths": contaminated_samples,
                 "queries": candidates,
-                "reference": reference,
-                "ref_index": reference_index,
-                "panel_bed": panel_bed
+                **static_inputs
             },
-            fn_name="run_sompy_batch"
+            priority=priority
         )
         sompy_refs = sompy_job.get_output_ref("stats_csvs")
-    agg_job = dxpy.new_dxjob(fn_input={"sompy_files": sompy_refs}, fn_name="gather")
+    agg_job = utils.new_subjob(fn_name="gather", inputs={"sompy_files": sompy_refs}, priority=priority)
     return {
         "sompy_csv": agg_job.get_output_ref("sompy_csv"),
         "recall_plot": agg_job.get_output_ref("recall_plot"),
     }
 
 @dxpy.entry_point("run_sompy_batch")
-def run_sompy_batch(truths: list[DXLink], queries: list[DXLink], reference: DXLink, ref_index: Optional[DXLink]=None, panel_bed: Optional[DXLink]=None):
-    dxpy.download_all_inputs(parallel=True)
-    input_path = Path("/home/dnanexus/in")
-    ref_path = next((input_path / "reference").glob("*")).resolve()
-    if ref_path.name.endswith((".tar", ".tar.gz", ".tgz")):
-        utils.extract_ref_tar(ref_path, ref_path.parent)
-    else:
-        index_p = Path("/home/dnanexus/in/reference_index/").glob("*.fai*")
-        index = next(index_p)
-        index.rename(Path("/home/dnanexus/in/reference") / index.name)
-    sompy_image = next(Path("/image").glob("*.tar.gz")).resolve()
-    mounts = sompy.make_sompy_mounts(in_dir=input_path, out_dir=Path("/out"))
-    with docker_utils.open_container(sompy_image, mounts) as container:
-        exit_code, output = container.exec_run(cmd=["/bin/bash", "-c", sompy_heredoc()])
+def run_sompy_batch(truths: list[DXLink], queries: list[DXLink], reference: DXLink, ref_index: Optional[DXLink]=None, panel_bed: Optional[DXLink]=None) -> dict[str, list[DXLink]]:
+    sompy_image, bcftools_image, mounts = utils.setup_sompy()
+    with docker_utils.open_container(bcftools_image, mounts) as container:
+        exit_code, output = container.exec_run(cmd=["/bin/bash", "-c", heredocs.bcftools_norm()])
         print(output.decode())
         if exit_code != 0:
-            raise RuntimeError(f"docker fail with exit code {exit_code}")
-        stats_files = [dxpy.upload_local_file(csv) for csv in Path("/home/dnanexus/out/").glob("*.csv")]
+            raise RuntimeError(f"bcftools norm failed with exit code {exit_code}")
+    with docker_utils.open_container(bcftools_image, mounts) as container:
+        exit_code, output = container.exec_run(cmd=["/bin/bash", "-c", heredocs.bcftools_sort()])
+        print(output.decode())
+        if exit_code != 0:
+            raise RuntimeError(f"bcftools sort failed with exit code {exit_code}")
+    with docker_utils.open_container(sompy_image, mounts) as container:
+        exit_code, output = container.exec_run(cmd=["/bin/bash", "-c", heredocs.sompy()])
+        print(output.decode())
+        if exit_code != 0:
+            raise RuntimeError(f"som.py failed with exit code {exit_code}")
+        stats_files = [dxpy.upload_local_file(str(csv)) for csv in Path("/home/dnanexus/out/").glob("*stats.csv")]
     return {"stats_csvs": stats_files}
 
-def sompy_heredoc() -> str:
-    script = textwrap.dedent("""
-        set -e
-        TRUTH_VCFS=($(find /in/truths -type f -name "*.vcf.gz"))
-        QUERY_VCFS=($(find /in/queries -type f -name "*.vcf.gz"))
-        REFERENCE=$(find /in/reference -type f ! -name "*.fai" ! -name "*.gzi" | head -n 1)
-        PANEL_BED=$( [ -d "/in/panel_bed" ] && find "/in/panel_bed" -type f -name "*.bed*" | head -n 1 )
-
-        for TRUTH in "${TRUTH_VCFS[@]}"; do
-            for QUERY in "${QUERY_VCFS[@]}"; do
-                T_NAME=$(basename "$TRUTH" .vcf.gz)
-                Q_NAME=$(basename "$QUERY" .vcf.gz)
-                /opt/hap.py/bin/som.py --no-count-unk -o "/out/${T_NAME}_${Q_NAME}" --reference "$REFERENCE" "$TRUTH" "$QUERY"
-            done
-        done
-    """).strip()
-    return script
-
 @dxpy.entry_point("run_sompy_pair")
-def run_sompy_pair(truth: DXFileID, query: DXFileID, reference: DXFileID, ref_index: Optional[DXFileID]=None, panel_bed: Optional[DXFileID]=None) -> SompyJobOutput:
-    """Performs a single VCF comparison using Sompy.
-
-    Downloads the truth, query, and reference files. If the reference is provided 
-    as a tarball, it extracts the first valid FASTA file found. Executes the 
-    Sompy comparison via a Docker image and uploads the resulting statistics.
-
-    Args:
-        truth: The DNAnexus file ID for the gold-standard VCF.
-        query: The DNAnexus file ID for the VCF to be evaluated.
-        reference: The DNAnexus file ID for the reference genome.
-        ref_index: The DNANexus file ID for the reference genome index
-
-    Returns:
-        A dictionary containing the uploaded DNAnexus file reference for 
-        the Sompy statistics CSV.
-        
-    Raises:
-        StopIteration: If a reference tarball is provided but no FASTA-formatted 
-            file is found within it.
-    """
-    input_path = Path("/home/dnanexus/in")
-    input_path.mkdir(parents=True, exist_ok=True)
-    sompy_image = next(Path("/image").glob("*.tar.gz")).resolve()
-    vcfs: dict[str, Path] = {vcf_id: input_path / dxpy.describe(vcf_id)["name"] for vcf_id in [truth, query]}
-    dxpy.download_dxfile(truth, filename=str(vcfs[truth]))
-    dxpy.download_dxfile(query, filename=str(vcfs[query]))
-    ref_path = utils.download_reference(reference, ref_index, input_path)
-    panel_path = None
-    if panel_bed:
-        panel_path = input_path / "panel.bed"
-        dxpy.download_dxfile(panel_bed, filename=str(panel_path))
-    sompy_output = sompy.run(sompy_image, vcfs[truth], vcfs[query], ref_path, panel_path)
+def run_sompy_pair(truth: DXLink, query: DXLink, reference: DXLink, ref_index: Optional[DXLink]=None, panel_bed: Optional[DXLink]=None) -> dict[str, DXLink]:
+    sompy_image, bcftools_image, mounts = utils.setup_sompy()
+    in_dir = Path("/home/dnanexus/in")
+    truth_vcf = utils.get_single_file(in_dir / "truth", "*.vcf.gz")
+    query_vcf = utils.get_single_file(in_dir / "query", "*.vcf.gz")
+    ref = utils.get_single_file(in_dir / "reference", exclude = {".fai", ".gz.fai", ".gzi", ".tar.gz"})
+    panel = utils.get_single_file(in_dir / "panel_bed", "*.bed*")
+    sompy_output = sompy.run(sompy_image, bcftools_image, mounts[0], mounts[1], truth_vcf, query_vcf, ref, panel)
     stats_dxfile = dxpy.upload_local_file(str(sompy_output))
     return {"stats_csv": stats_dxfile}
 
 @dxpy.entry_point("gather")
-def gather(sompy_files: list[DXLink]) -> SompyResults[DXFile]:
+def gather(sompy_files: list[DXLink]) -> dict[str, DXLink]:
     """Aggregates multiple Sompy result files into a summary CSV and plot.
 
     Downloads all statistics files generated by individual Sompy jobs, 

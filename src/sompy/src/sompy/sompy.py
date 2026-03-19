@@ -1,42 +1,34 @@
-import re
 import pandas as pd
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional
 from docker.types import Mount
 
 from egg_helpers import docker_utils
+from . import sort, utils
 
-def run(image: Path, truth: Path, query: Path, reference: Path, panel_regions: Optional[Path], out_dir: Optional[Path]=Path.cwd()) -> Path:
-    """Runs the Sompy comparison tool inside a Docker container.
+def run(sompy_image: Path, bcftools_image: Path, in_mount: Mount, out_mount: Mount, truth: Path, query: Path, reference: Path, panel_regions: Optional[Path], sort_vcf: Optional[bool]=True) -> Path:
+    if sort_vcf:
+        truth_vcf = sort.run_bcftools_sort(bcftools_image, truth, in_mount, out_mount)
+        query_vcf = sort.run_bcftools_sort(bcftools_image, query, in_mount, out_mount)
+    else:
+        truth_vcf = truth
+        query_vcf = query
+    stats = _run_sompy(sompy_image, in_mount, out_mount, truth_vcf, query_vcf, reference, panel_regions)
+    return stats
 
-    Sets up bind mounts between the host and the container, maps file paths 
-    to the container's filesystem, and executes the `som.py` command. This 
-    function assumes that truth, query, and reference files are located 
-    within the same parent directory to simplify mounting.
+def make_sompy_mounts(in_dir: Path, out_dir: Path) -> list[Mount, Mount]:
+    host_in = in_dir
+    cont_in = Path("/in")
+    host_out = out_dir
+    host_out.mkdir(parents=True, exist_ok=True)
+    cont_out = Path("/out")
+    mounts = docker_utils.make_bindmounts((host_in, cont_in), (host_out, cont_out))
+    return mounts
 
-    Args:
-        image: Path to the Docker image tarball (.tar.gz).
-        truth: Path to the ground-truth VCF on the host.
-        query: Path to the query/evaluation VCF on the host.
-        reference: Path to the reference FASTA on the host.
-        panel_regions: Path to the panel-regions BED on the host.
-
-    Returns:
-        The absolute path to the generated '.stats.csv' file on the host.
-
-    Raises:
-        RuntimeError: If the Sompy container exits with a non-zero status code.
-        StopIteration: If no '.stats.csv' file is found in the output directory 
-            after the container finishes.
-
-    Note:
-        The function automatically handles internal Docker path mapping, 
-        translating host paths into '/in' and '/out' container paths.
-    """
-    mounts = make_sompy_mounts(in_dir=truth.absolute().parent, out_dir=out_dir)
-    host_out = Path(mounts[1]["Source"])
-    command = cmd(mounts, truth, query, reference, panel_regions)
-    container = docker_utils.run_from_archive(image=image, command=command, mounts=mounts)
+def _run_sompy(image, in_mount, out_mount, truth_vcf, query_vcf, reference, panel_regions):
+    host_out = Path(out_mount["Source"])
+    command = _mounted_sompy_cmd(in_mount, out_mount, truth_vcf, query_vcf, reference, panel_regions)
+    container = docker_utils.run_from_archive(image=image, command=command, mounts=[in_mount, out_mount])
     try:
         result = container.wait()
         if result.get("StatusCode") != 0:
@@ -46,34 +38,24 @@ def run(image: Path, truth: Path, query: Path, reference: Path, panel_regions: O
     finally:
         container.remove()
 
-def make_sompy_mounts(in_dir: Path, out_dir: Path) -> Tuple[Mount, Mount]:
-    host_in = in_dir
-    cont_in = Path("/in")
-    host_out = out_dir
-    host_out.mkdir(parents=True, exist_ok=True)
-    cont_out = Path("/out")
-    mounts = docker_utils.make_bindmounts((host_in, cont_in), (host_out, cont_out))
-    return mounts
+def _mounted_sompy_cmd(in_mount: Path, out_mount: Path, truth: Path, query: Path, reference: Path, panel_regions: Optional[Path]) -> list[str]:
+    cont_out = Path(out_mount["Target"])
 
-def cmd(mounts: Tuple[Mount, Mount], truth: Path, query: Path, reference: Path, panel_regions: Optional[Path]):
-    host_in = Path(mounts[0]["Source"])
-    cont_in = Path(mounts[0]["Target"])
-    cont_out = Path(mounts[1]["Target"])
-
-    c_truth = cont_in / truth.relative_to(host_in)
-    c_query = cont_in / query.relative_to(host_in)
-    c_ref = cont_in / reference.relative_to(host_in)
+    c_truth = utils.get_container_path(truth, in_mount, out_mount)
+    c_query = utils.get_container_path(query, in_mount, out_mount)
+    c_ref   = utils.get_container_path(reference, in_mount, out_mount)
+    
     if panel_regions:
-        c_panel = cont_in / panel_regions.relative_to(host_in)
+        c_panel = utils.get_container_path(panel_regions, in_mount, out_mount)
     else:
         c_panel = None
 
-    command = _make_relative_cmd(c_truth, c_query, c_ref, cont_out, c_panel)
+    command = _make_relative_sompy_cmd(c_truth, c_query, c_ref, cont_out, c_panel)
     return command
 
-def _make_relative_cmd(truth: Path, query: Path, reference: Path, out_dir: Path, panel_regions: Optional[Path]) -> str:
-    truth_sample = remove_vcf_extension(truth)
-    query_sample = remove_vcf_extension(query)
+def _make_relative_sompy_cmd(truth: Path, query: Path, reference: Path, out_dir: Path, panel_regions: Optional[Path]) -> str:
+    truth_sample = utils.remove_vcf_extension(truth)
+    query_sample = utils.remove_vcf_extension(query)
     samples = f"{truth_sample}_{query_sample}"
     base_cmd = [
         "/opt/hap.py/bin/som.py",
@@ -87,7 +69,7 @@ def _make_relative_cmd(truth: Path, query: Path, reference: Path, out_dir: Path,
         base_cmd += ["--restrict-regions", str(panel_regions)]
     sompy_inputs = [
         "--reference", str(reference),
-        str(truth), 
+        str(truth),
         str(query)
     ]
     return base_cmd + sompy_inputs
@@ -106,25 +88,6 @@ def parse_samples(df: pd.DataFrame) -> pd.DataFrame:
     """
     vcf_pattern = r'[^\s]+\.(?:g\.)?g?vcf(?:\.gz)?'
     matches = df["sompycmd"].str.findall(vcf_pattern)
-    df["truth"] = matches.str[0].apply(remove_vcf_extension)
-    df["query"] = matches.str[1].apply(remove_vcf_extension)
+    df["truth"] = matches.str[0].apply(utils.remove_vcf_extension)
+    df["query"] = matches.str[1].apply(utils.remove_vcf_extension)
     return df
-
-def remove_vcf_extension(vcf: Path|str) -> str:
-    """Extracts a clean sample name by stripping VCF-specific extensions.
-
-    Removes suffixes including .vcf, .gvcf, .g.vcf, and their .gz compressed 
-    variants from the filename.
-
-    Args:
-        vcf: The path to the VCF file.
-
-    Returns:
-        The filename as a string with the VCF extensions removed.
-        
-    Example:
-        >>> clean_sample_name(Path("sample1.g.vcf.gz"))
-        'sample1'
-    """
-    vcf = Path(vcf)
-    return re.sub(r'\.(?:g\.)?g?vcf(?:\.gz)?$', "", vcf.name)

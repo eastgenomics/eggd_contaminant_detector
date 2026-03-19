@@ -72,7 +72,7 @@ def load_image(image: Path|str, timeout: int=300) -> Tuple[ImageID, DockerClient
     image_id = loaded_images[0].id
     return image_id, client
 
-def make_bindmounts(*bindings: Tuple[Path, Path]) -> list[Mount]:
+def make_bindmounts(*bindings: Tuple[str|Path, str|Path]) -> list[Mount]:
     """Creates a list of Docker bind mounts from multiple source/target pairs.
 
     Args:
@@ -84,7 +84,7 @@ def make_bindmounts(*bindings: Tuple[Path, Path]) -> list[Mount]:
     """
     return [make_bindmount(*binding) for binding in bindings]
 
-def make_bindmount(src: Path, dst: Path) -> Mount:
+def make_bindmount(src: str|Path, dst: str|Path) -> Mount:
     """Creates a single Docker bind mount object.
 
     Handles path expansion (e.g., '~') and converts paths to absolute 
@@ -97,4 +97,6 @@ def make_bindmount(src: Path, dst: Path) -> Mount:
     Returns:
         A Mount object configured with the 'bind' type.
     """
-    return Mount(source=str(src.expanduser().absolute()), target=str(dst.expanduser().absolute()), type="bind")
+    src_exp = Path(src).expanduser().absolute()
+    dst_exp = Path(dst).expanduser().absolute()
+    return Mount(source=str(src_exp), target=str(dst_exp), type="bind")

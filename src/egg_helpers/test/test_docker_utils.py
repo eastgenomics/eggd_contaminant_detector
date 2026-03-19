@@ -36,7 +36,7 @@ def test_load_image(mock_docker: MagicMock, tmp_path: Path) -> None:
     assert img_id == "sha256:1234567890abcdef"
     mock_docker.images.load.assert_called_once()
 
-def test_run_image_from_archive(mock_docker):
+def test_run_from_archive(mock_docker):
     # We patch 'load_image' so we don't have to deal with the filesystem here
     with patch("egg_helpers.docker_utils.load_image") as mock_load:
         mock_load.return_value = ("sha256:fake", mock_docker)
@@ -44,17 +44,37 @@ def test_run_image_from_archive(mock_docker):
         mock_container = MagicMock()
         mock_docker.containers.run.return_value = mock_container
         
-        container = run_image_from_archive(
+        container = run_from_archive(
             image="dummy.tar.gz",
             command=["ls"],
-            mounts=[]
         )
         
         mock_docker.containers.run.assert_called_once_with(
             image="sha256:fake",
-            mounts=[],
             command=["ls"],
             detach=True,
             auto_remove=False
         )
         assert container == mock_container
+
+def test_exec_from_archive(mock_docker):
+    with patch("egg_helpers.docker.load_image") as mock_load:
+        mock_load.return_value = ("sha256:fake", mock_docker)
+    
+    mock_container = MagicMock()
+    mock_docker.containers.run.return_value = mock_container
+
+    container = exec_from_archive(
+        image="dummy.tar.gz",
+        command=["ls"],
+        mounts=[]
+    )
+
+    mock_docker.containers.run.assert_called_once_with(
+        image="sha256:fake",
+        mounts=[],
+        command=["ls"],
+        detach=True,
+        auto_remove=False
+    )
+    assert container == mock_container
