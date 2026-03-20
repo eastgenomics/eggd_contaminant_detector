@@ -1,6 +1,6 @@
 import tarfile
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Optional
 from docker.types import Mount
 
 import pandas as pd
@@ -10,6 +10,39 @@ from .types import DXFileID, DXLink
 
 from sompy import bcftools
 from sompy.utils import make_mounts
+
+def validate_reference_args(reference: DXLink, reference_index: Optional[DXLink]=None):
+    ref_fid = get_file_id(reference)
+    ref_file = Path(dxpy.describe(ref_fid)["name"])
+    if not ref_file.name.endswith(("tar", "tgz", "tar.gz")):
+        if not reference_index:
+            raise FileNotFoundError("Bare reference FASTA provided without associated index. "
+                                    "Please pass an index file to -ireference_index if using a raw FASTA file, "
+                                    "or submit a reference bundle tarball. Exiting...")   
+
+def launch_sompy_jobs(contaminated_samples: list[DXLink], 
+                     candidates: list[DXLink],
+                     reference: DXLink,
+                     reference_index: Optional[DXLink]=None,
+                     panel_bed: Optional[DXLink]=None,
+                     parallel: bool=True,
+                     priority: str="normal") -> DXLink | list[DXLink]:
+    static_inputs = {"reference": reference, "ref_index": reference_index, "panel_bed": panel_bed}
+    if parallel:
+        sompy_refs = []
+        for truth in contaminated_samples:
+            for query in candidates:
+                inputs = {"truth": truth, "query": query, **static_inputs}
+                sompy_job = new_subjob(fn_name="run_sompy_pair", inputs=inputs, priority=priority)
+                sompy_refs.append(sompy_job.get_output_ref("stats_csv"))
+    else:
+        sompy_job = new_subjob(
+            fn_name="run_sompy_batch",
+            inputs={"truths": contaminated_samples, "queries": candidates, **static_inputs},
+            priority=priority
+        )
+        sompy_refs = sompy_job.get_output_ref("stats_csvs")
+    return sompy_refs
 
 def setup_env() -> Tuple[Path, Path, list[Mount, Mount]]:
     dxpy.download_all_inputs(parallel=True)

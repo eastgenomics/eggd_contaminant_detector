@@ -32,30 +32,10 @@ def main(contaminated_samples: list[DXLink],
         A dictionary containing DNAnexus job-based references to the final 
         aggregated CSV and recall plot.
     """
-    ref_fid = utils.get_file_id(reference)
-    ref_file = Path(dxpy.describe(ref_fid)["name"])
-    if not ref_file.name.endswith(("tar", "tgz", "tar.gz")):
-        if not reference_index:
-            raise FileNotFoundError("Bare reference FASTA provided without associated index. "
-                                    "Please pass an index file to -ireference_index if using a raw FASTA file, "
-                                    "or submit a reference bundle tarball. Exiting...")       
+    utils.validate_reference_args(reference, reference_index)   
     parent_job = dxpy.DXJob(dxpy.JOB_ID)
     priority = parent_job.describe().get('priority', 'normal')
-    static_inputs = {"reference": reference, "ref_index": reference_index, "panel_bed": panel_bed}
-    if parallel:
-        sompy_refs = []
-        for truth in contaminated_samples:
-            for query in candidates:
-                inputs = {"truth": truth, "query": query, **static_inputs}
-                sompy_job = utils.new_subjob(fn_name="run_sompy_pair", inputs=inputs, priority=priority)
-                sompy_refs.append(sompy_job.get_output_ref("stats_csv"))
-    else:
-        sompy_job = utils.new_subjob(
-            fn_name="run_sompy_batch",
-            inputs={"truths": contaminated_samples, "queries": candidates, **static_inputs},
-            priority=priority
-        )
-        sompy_refs = sompy_job.get_output_ref("stats_csvs")
+    sompy_refs = utils.launch_sompy_jobs(contaminated_samples, candidates, reference, reference_index, panel_bed, parallel, priority)
     agg_job = utils.new_subjob(fn_name="gather", inputs={"sompy_files": sompy_refs}, priority=priority)
     return {
         "sompy_csv": agg_job.get_output_ref("sompy_csv"),
