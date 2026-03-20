@@ -17,7 +17,6 @@ def start_container(image: Path|str, mounts: Optional[list[Mount]]=None) -> Iter
     with _start_container(image=image, command=["tail", "-f", "/dev/null"], mounts=mounts) as container:
         yield container
 
-@contextmanager
 def run_container(image: Path|str, command: list[str], mounts=list[Mount]) -> Iterator[Container]:
     with _start_container(image=image, command=command, mounts=mounts) as container:
         yield container
