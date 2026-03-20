@@ -7,9 +7,32 @@ import pandas as pd
 import dxpy
 from dxpy import DXJob
 from .types import DXFileID, DXLink
-from sompy import sompy
 
-def extract_ref_tar(ref_path: Path, destination: Path) -> Path:
+from sompy import bcftools
+from sompy.utils import make_mounts
+
+def setup_env() -> Tuple[Path, Path, list[Mount, Mount]]:
+    dxpy.download_all_inputs(parallel=True)
+    in_dir = Path("/home/dnanexus/in")
+    setup_reference(in_dir)
+    sompy_image = next(Path("/image").glob("*happy*.tar.gz")).resolve()
+    bcftools_image = next(Path("/image").glob("*bcftools*.tar.gz")).resolve()
+    mounts = make_mounts(in_dir, "/home/dnanexus/out")
+    return sompy_image, bcftools_image, mounts
+
+def setup_reference(in_dir: Path) -> None:
+    ref_dir = in_dir / "reference"
+    ref_path = next(ref_dir.glob("*")).resolve()
+    if ref_path.name.endswith((".tar", ".tar.gz", ".tgz")):
+        extract_ref_tar(ref_path, ref_dir)
+    else:
+        index_path = Path("/home/dnanexus/in/ref_index")
+        indices = [p for p in index_path.glob("*") if p.suffix in {".fai", ".gzi"}]
+        if indices:
+            for idx in indices:
+                idx.rename(ref_dir / idx.name)
+
+def extract_ref_tar(ref_path: Path, destination: Path) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     destination_root = destination.resolve()
     with tarfile.open(ref_path) as tar:
@@ -29,25 +52,32 @@ def extract_ref_tar(ref_path: Path, destination: Path) -> Path:
             # strip away the nesting from the Tarfile object names so we can extract them directly
             member.name = Path(member.name).name
         tar.extractall(members=[fasta_m, index_m], path=destination_root)
-        return destination_root / fasta_m.name
 
-def setup_sompy() -> Tuple[Path, list[Mount, Mount]]:
-    dxpy.download_all_inputs(parallel=True)
-    input_path = Path("/home/dnanexus/in")
-    ref_dir = input_path / "reference"
-    ref_path = next(ref_dir.glob("*")).resolve()
-    if ref_path.name.endswith((".tar", ".tar.gz", ".tgz")):
-        ref_path = extract_ref_tar(ref_path, ref_dir)
-    else:
-        index_path = Path("/home/dnanexus/in/ref_index")
-        indices = [p for p in index_path.glob("*") if p.suffix in {".fai", ".gzi"}]
-        if indices:
-            for idx in indices:
-                idx.rename(ref_dir / idx.name)
-    sompy_image = next(Path("/image").glob("*happy*.tar.gz")).resolve()
-    bcftools_image = next(Path("/image").glob("*bcftools*")).resolve()
-    mounts = sompy.make_sompy_mounts(in_dir=input_path, out_dir=Path("/home/dnanexus/out"))
-    return sompy_image, bcftools_image, mounts
+def prepare_sompy_inputs(in_dir, bcftools_image) -> dict[str, Path]:
+    truth_vcf = preprocess(get_single_file(in_dir / "truth", "*.vcf.gz"), bcftools_image)
+    query_vcf = preprocess(get_single_file(in_dir / "query", "*.vcf.gz"), bcftools_image)
+    ref = get_single_file(in_dir / "reference", exclude = {".fai", ".gz.fai", ".gzi", ".tar.gz"})
+    panel = get_single_file(in_dir / "panel_bed", "*.bed*")
+    return {
+        "truth": truth_vcf,
+        "query": query_vcf,
+        "reference": ref,
+        "panel_regions": panel
+    }
+
+def get_single_file(path: Path, pattern: str = "*", exclude: set = None) -> Path:
+    files = list(path.rglob(pattern))
+    if exclude:
+        files = [f for f in files if "".join(f.suffixes) not in exclude]
+    if not files:
+        print(f"No files matching {pattern} found in {path}")
+        return None
+    return files[0]
+
+def preprocess(vcf: Path, bcftools_image: Path) -> Path:
+    normalised_vcf = bcftools.norm(vcf, bcftools_image)
+    sorted_vcf = bcftools.sort(normalised_vcf, bcftools_image)
+    return sorted_vcf
 
 def new_subjob(fn_name: str, inputs: dict[str, str], priority: str) -> DXJob:
     # using our own wrapper instead of dxpy.new_dxjob because new_dxjob doesn't
@@ -105,12 +135,3 @@ def shorten(name: str) -> str:
     if len(parts) >= 3:
         return f"{parts[1]}-{parts[2]}"
     return name
-
-def get_single_file(path: Path, pattern: str = "*", exclude: set = None) -> Path:
-    files = list(path.rglob(pattern))
-    if exclude:
-        files = [f for f in files if "".join(f.suffixes) not in exclude]
-    if not files:
-        print(f"No files matching {pattern} found in {path}")
-        return None
-    return files[0]

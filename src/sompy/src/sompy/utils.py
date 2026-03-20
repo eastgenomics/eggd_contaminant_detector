@@ -1,16 +1,18 @@
 import re
 from pathlib import Path
 from docker.types import Mount
-
-def get_container_path(host_path: Path, in_m: Mount, out_m: Mount) -> Path:
-    h_in, c_in = Path(in_m["Source"]), Path(in_m["Target"])
-    h_out, c_out = Path(out_m["Source"]), Path(out_m["Target"])
-
-    if host_path.is_relative_to(h_in):
-        return c_in / host_path.relative_to(h_in)
-    return c_out / host_path.relative_to(h_out)
+from egg_helpers import docker_utils
 
 def remove_vcf_extension(vcf: Path | str) -> str:
     """Removes complex VCF extensions including .sorted and .g variations."""
     vcf_name = Path(vcf).name
     return re.sub(r'(\.sorted)?\.(?:g\.)?g?vcf(?:\.gz)?$', "", vcf_name)
+
+def make_mounts(in_dir: Path, out_dir: Path) -> list[Mount, Mount]:
+    host_in = in_dir
+    cont_in = Path("/in")
+    host_out = out_dir
+    host_out.mkdir(parents=True, exist_ok=True)
+    cont_out = Path("/out")
+    mounts = docker_utils.make_bindmounts((host_in, cont_in), (host_out, cont_out))
+    return mounts

@@ -4,56 +4,16 @@ from typing import Optional
 from docker.types import Mount
 
 from egg_helpers import docker_utils
-from . import sort, utils
+from . import utils
 
-def run(sompy_image: Path, bcftools_image: Path, in_mount: Mount, out_mount: Mount, truth: Path, query: Path, reference: Path, panel_regions: Optional[Path], sort_vcf: Optional[bool]=True) -> Path:
-    if sort_vcf:
-        truth_vcf = sort.run_bcftools_sort(bcftools_image, truth, in_mount, out_mount)
-        query_vcf = sort.run_bcftools_sort(bcftools_image, query, in_mount, out_mount)
-    else:
-        truth_vcf = truth
-        query_vcf = query
-    stats = _run_sompy(sompy_image, in_mount, out_mount, truth_vcf, query_vcf, reference, panel_regions)
-    return stats
+def run(image: Path, truth: Path, query: Path, reference: Path, panel_regions: Optional[Path], in_mount: Mount, out_mount: Mount):
+    out_dir = Path(out_mount["Target"])
+    command = sompy_command(truth, query, reference, out_dir, panel_regions, in_mount, out_mount)
+    with docker_utils.run_container(image, command, [in_mount, out_mount]) as container:
+        return next(out_dir.glob("*.stats.csv)"))
 
-def make_sompy_mounts(in_dir: Path, out_dir: Path) -> list[Mount, Mount]:
-    host_in = in_dir
-    cont_in = Path("/in")
-    host_out = out_dir
-    host_out.mkdir(parents=True, exist_ok=True)
-    cont_out = Path("/out")
-    mounts = docker_utils.make_bindmounts((host_in, cont_in), (host_out, cont_out))
-    return mounts
-
-def _run_sompy(image, in_mount, out_mount, truth_vcf, query_vcf, reference, panel_regions):
-    host_out = Path(out_mount["Source"])
-    command = _mounted_sompy_cmd(in_mount, out_mount, truth_vcf, query_vcf, reference, panel_regions)
-    container = docker_utils.run_from_archive(image=image, command=command, mounts=[in_mount, out_mount])
-    try:
-        result = container.wait()
-        if result.get("StatusCode") != 0:
-            print(container.logs().decode())
-            raise RuntimeError(f"Sompy failed with exit code {result['StatusCode']}")
-        return next(host_out.glob("*.stats.csv")).resolve()
-    finally:
-        container.remove()
-
-def _mounted_sompy_cmd(in_mount: Path, out_mount: Path, truth: Path, query: Path, reference: Path, panel_regions: Optional[Path]) -> list[str]:
-    cont_out = Path(out_mount["Target"])
-
-    c_truth = utils.get_container_path(truth, in_mount, out_mount)
-    c_query = utils.get_container_path(query, in_mount, out_mount)
-    c_ref   = utils.get_container_path(reference, in_mount, out_mount)
-    
-    if panel_regions:
-        c_panel = utils.get_container_path(panel_regions, in_mount, out_mount)
-    else:
-        c_panel = None
-
-    command = _make_relative_sompy_cmd(c_truth, c_query, c_ref, cont_out, c_panel)
-    return command
-
-def _make_relative_sompy_cmd(truth: Path, query: Path, reference: Path, out_dir: Path, panel_regions: Optional[Path]) -> str:
+@docker_utils.make_io_relative_to_container
+def sompy_command(truth: Path, query: Path, reference: Path, out_dir: Path, panel_regions: Optional[Path], *mounts: Mount) -> str:
     truth_sample = utils.remove_vcf_extension(truth)
     query_sample = utils.remove_vcf_extension(query)
     samples = f"{truth_sample}_{query_sample}"

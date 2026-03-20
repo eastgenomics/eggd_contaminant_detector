@@ -1,6 +1,7 @@
+from functools import wraps
 from pathlib import Path
 from contextlib import contextmanager
-from typing import Annotated, Iterator, Tuple, Optional
+from typing import Annotated, Callable, Iterator, Tuple, Optional
 
 import docker
 from docker import DockerClient
@@ -11,16 +12,31 @@ DIGEST_PATTERN = r"^sha256:[a-fA-F0-9]{64}$"
 ImageID = Annotated[str, "Docker SHA256 Digest", DIGEST_PATTERN]
 
 @contextmanager
-def open_container(image: Path|str, mounts: Optional[list[Mount]]=None) -> Iterator[Container]:
-    """Starts a container and ensures it's killed/removed after the block."""
-    container = run_from_archive(image, command=["tail", "-f", "/dev/null"], mounts=mounts)
+def start_container(image: Path|str, mounts: Optional[list[Mount]]=None) -> Iterator[Container]:
+    """Starts a container for use with docker exec inputs."""
+    with _start_container(image=image, command=["tail", "-f", "/dev/null"], mounts=mounts) as container:
+        yield container
+
+@contextmanager
+def run_container(image: Path|str, command: list[str], mounts=list[Mount]) -> Iterator[Container]:
+    with _start_container(image=image, command=command, mounts=mounts) as container:
+        yield container
+        result = container.wait()
+        status_code = result["StatusCode"]
+        if status_code != 0:  
+            print(container.logs().decode())
+            raise RuntimeError(f"Container failed with exit code {status_code}")
+
+@contextmanager
+def _start_container(image: Path|str, command: list[str], mounts: Optional[list[Mount]]=None) -> Iterator[Container]:
+    container = _run_from_archive(image, command=command, mounts=mounts)
     try:
         yield container
     finally:
         container.stop()
         container.remove()
 
-def run_from_archive(image: Path|str, command: Optional[list[str]]=None, mounts: Optional[list[Mount]]=None) -> Container:
+def _run_from_archive(image: Path|str, command: Optional[list[str]]=None, mounts: Optional[list[Mount]]=None) -> Container:
     """Loads a Docker image from an archive and runs it as a detached container.
 
     This is a high-level wrapper that first ensures the image is available in 
@@ -71,6 +87,24 @@ def load_image(image: Path|str, timeout: int=300) -> Tuple[ImageID, DockerClient
         raise ValueError(f"No images found in archive: {image}")
     image_id = loaded_images[0].id
     return image_id, client
+
+def make_io_relative_to_container(func: Callable) -> Callable:
+    @wraps(func)
+    def wrapper(*args, mounts: list[Mount], **kwargs):
+        new_args = [get_container_path(arg, *mounts) if isinstance(arg, Path) else arg for arg in args]
+        new_kwargs = {k: (get_container_path(v, *mounts) if isinstance(v, Path) else v) for k, v in kwargs.items()}
+        return func(*new_args, **new_kwargs)
+    return wrapper
+
+def get_container_path(file_path: Path, *mounts: Mount) -> Path:
+    for mount in mounts:
+        host = Path(mount["Source"])
+        container = Path(mount["Target"])
+        try:
+            return container / file_path.relative_to(host)
+        except ValueError:
+            continue
+    return file_path
 
 def make_bindmounts(*bindings: Tuple[str|Path, str|Path]) -> list[Mount]:
     """Creates a list of Docker bind mounts from multiple source/target pairs.

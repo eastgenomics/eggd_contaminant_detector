@@ -29,25 +29,18 @@ def bcftools_sort() -> str:
         set -e
         bcftools_sort() {
             local VCF=$1
-            local REFERENCE=$2
             STEM=$(dirname -- $(readlink -e "$VCF"))
             NAME=$(basename -- "$VCF" .vcf.gz)
-            bcftools norm -m-any -f "$REFERENCE" "$VCF" | \
-                bcftools norm -d any -W=tbi -Oz -o "${STEM}/${NAME}.norm.vcf.gz" "$VCF"
+            bcftools sort -W=tbi -Oz -o "${STEM}/${NAME}.sorted.vcf.gz" "$VCF"
         }
-            local VCF=$1
-            NAME=$(basename "$VCF" .vcf.gz)
-            bcftools sort -W=tbi -Oz -o /in/truths/"${NAME}.sorted.vcf.gz" "$TRUTH"
-        }
+
         TRUTH_VCFS=($(find /in/truths -type f -name "*.vcf.gz"))
         QUERY_VCFS=($(find /in/queries -type f -name "*.vcf.gz"))
         for TRUTH in "${TRUTH_VCFS[@]}"; do
-            NAME=$(basename "$TRUTH" .vcf.gz)
-            bcftools sort -W=tbi -Oz -o /in/truths/"${NAME}.sorted.vcf.gz" "$TRUTH"
+            bcftools_sort "$TRUTH"
         done
         for QUERY in "${QUERY_VCFS[@]}"; do
-            NAME=$(basename "$QUERY" .vcf.gz)
-            bcftools sort -W=tbi -Oz -o /in/queries/"${NAME}.sorted.vcf.gz" "$QUERY"
+            bcftools_sort "$QUERY"
         done
     """).strip()
     return script
@@ -65,6 +58,7 @@ def sompy() -> str:
             --no-fixchr-truth
             --no-fixchr-query
             --include-nonpass
+            --normalize-all
             --reference "$REFERENCE"
         )
         
