@@ -100,6 +100,7 @@
     "version": "0",
     "interpreter": "python3",
     "file": "src/eggd_contaminant_detector/app.py",
+    "priority": "low",
     "entryPoints": {
       "run_sompy_batch": {
         "outputSpec": [
