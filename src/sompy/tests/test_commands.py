@@ -1,3 +1,4 @@
+import pytest
 import sompy._commands
 
 

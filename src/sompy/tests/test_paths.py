@@ -3,29 +3,36 @@ from typing import TypeAlias
 
 import pytest
 
-import sompy._paths # type: ignore
+import sompy._paths  # type: ignore
 
-def test_make_mounts_str(tmp_path: Path, bindmounts: list[dict[str, str | bool]]) -> None:
+
+def test_make_mounts_str(
+    tmp_path: Path, bindmounts: list[dict[str, str | bool]]
+) -> None:
     in_dir = str(tmp_path / "in")
     out_dir = str(tmp_path / "out")
     actual_mounts = sompy._paths._make_mounts(in_dir, out_dir)
     assert actual_mounts == bindmounts
 
 
-def test_make_mounts_path(tmp_path: Path, bindmounts: list[dict[str, str | bool]]) -> None:
+def test_make_mounts_path(
+    tmp_path: Path, bindmounts: list[dict[str, str | bool]]
+) -> None:
     in_dir = tmp_path / "in"
     out_dir = tmp_path / "out"
     actual_mounts = sompy._paths._make_mounts(in_dir, out_dir)
     assert actual_mounts == bindmounts
 
 
-def test_get_host_out_dir(bindmounts: list[dict[str, str | bool]], tmp_path: Path) -> None:
-    out_dir = sompy._paths._get_out_dir(*bindmounts, key="Source") # type: ignore
+def test_get_host_out_dir(
+    bindmounts: list[dict[str, str | bool]], tmp_path: Path
+) -> None:
+    out_dir = sompy._paths._get_out_dir(*bindmounts, key="Source")  # type: ignore
     assert out_dir == tmp_path / "out"
 
 
 def test_get_container_out_dir(bindmounts: list[dict[str, str | bool]]) -> None:
-    out_dir = sompy._paths._get_out_dir(*bindmounts, key="Target") # type: ignore
+    out_dir = sompy._paths._get_out_dir(*bindmounts, key="Target")  # type: ignore
     assert out_dir == Path("/out")
 
 

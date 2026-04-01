@@ -3,7 +3,7 @@ import pandas as pd
 import sompy._stats
 
 
-def test_parse_samples(sompy_df: pd.DataFrame):
+def test_parse_samples(sompy_df: pd.DataFrame) -> None:
     df = sompy._stats.parse_samples(sompy_df)
     groups = ["a", "b", "c", "d", "e"]
     expected_truth_column = pd.Series(

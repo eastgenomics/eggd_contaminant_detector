@@ -3,7 +3,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Optional
 
-import sompy # type: ignore
+import sompy  # type: ignore
 
 
 def setup_ref_from_data_dir(data_dir: Path) -> None:

@@ -42,11 +42,13 @@ def _remove_vcf_extension(vcf: Path | str) -> str:
     return re.sub(r"(\.sorted)?\.(?:g\.)?g?vcf(?:\.gz)?$", "", vcf_name)
 
 
-def make_mounts(in_dir: str | Path, out_dir: str | Path) -> list[Mount]:
+def _make_mounts(in_dir: str | Path, out_dir: str | Path) -> list[Mount]:
     host_in = Path(in_dir)
     cont_in = Path("/in")
     host_out = Path(out_dir)
     host_out.mkdir(parents=True, exist_ok=True)
     cont_out = Path("/out")
-    mounts = ambergris.make_bindmounts((host_in, cont_in), (host_out, cont_out))
+    mounts: list[Mount] = ambergris.make_bindmounts(
+        (host_in, cont_in), (host_out, cont_out)
+    )
     return mounts

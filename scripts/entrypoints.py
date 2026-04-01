@@ -2,12 +2,13 @@ import dxpy
 import dxpy.api
 from pathlib import Path
 import contaminant_detector
-from typing import Any, TypeAlias, TypedDict, Optional, cast
+from typing import Any, TypeAlias, Mapping, TypedDict, Optional, cast
 
 DXLinkContent: TypeAlias = dict[str, Any]
 DXLink = TypedDict("DXLink", {"$dnanexus_link": DXLinkContent})
 
 ### Helper functions
+
 
 def launch_sompy_jobs(
     contaminated_samples: list[DXLink],
@@ -24,7 +25,7 @@ def launch_sompy_jobs(
         "panel_bed": panel_bed,
     }
     if parallel:
-        sompy_refs: DXLink | list[DXLink] = []
+        sompy_refs = []
         for truth in contaminated_samples:
             for query in candidates:
                 inputs = {"truth": truth, "query": query, **static_inputs}
@@ -33,6 +34,7 @@ def launch_sompy_jobs(
                 )
                 sompy_ref = cast(DXLink, sompy_job.get_output_ref("stats_csv"))
                 sompy_refs.append(sompy_ref)
+        return sompy_refs
     else:
         sompy_job = new_subjob(
             fn_name="run_sompy_batch",
@@ -43,11 +45,11 @@ def launch_sompy_jobs(
             },
             priority=priority,
         )
-        sompy_refs = cast(DXLink, sompy_job.get_output_ref("stats_csvs"))
-    return sompy_refs
+        return cast(DXLink, sompy_job.get_output_ref("stats_csvs"))
+
 
 def new_subjob(
-    fn_name: str, inputs: dict[str, str | DXLink | list[DXLink]], priority: str
+    fn_name: str, inputs: Mapping[str, DXLink | list[DXLink] | None], priority: str
 ) -> dxpy.DXJob:
     # using our own wrapper instead of dxpy.new_dxjob because new_dxjob doesn't
     # support setting the job priority
@@ -55,10 +57,11 @@ def new_subjob(
     response = dxpy.api.job_new(payload)
     return dxpy.DXJob(response["id"])
 
+
 def validate_reference_args(
     reference: DXLink, reference_index: Optional[DXLink] = None
-):
-    ref_fid = get_file_id(reference)
+) -> None:
+    ref_fid = reference["$dnanexus_link"]["id"]
     # dxpy.describe's return type hint is (Any | list[Unknown]).
     # This is too broad - it is actually dict[str, Any], or a list thereof.
     # We're using typing.cast to override the type declaration, as it
@@ -73,18 +76,15 @@ def validate_reference_args(
                 "or submit a reference bundle tarball. Exiting..."
             )
 
-def get_file_id(dx_link: DXLink) -> str | DXLinkContent:
-    try:
-        return dx_link["$dnanexus_link"]["id"]
-    except TypeError:
-        return dx_link["$dnanexus_link"]
 
 def get_single_file(parent: Path, pattern: str) -> Path:
     glob = parent.glob(pattern)
     file = next(glob)
     return file
 
+
 ### Entrypoints
+
 
 @dxpy.entry_point("main")
 def main(
@@ -116,6 +116,7 @@ def main(
         "recall_plot": agg_ref,
     }
 
+
 @dxpy.entry_point("run_sompy_batch")
 def run_sompy_batch(
     truths: list[DXLink],
@@ -135,17 +136,17 @@ def run_sompy_batch(
         "out_dir": out_dir,
         "sompy_image": get_single_file(images, "*happy*.gz"),
         "bcftools_image": get_single_file(images, "*bcftools*.gz"),
-        "data_dir": in_dir
+        "data_dir": in_dir,
     }
 
     contaminant_detector.run_sompy_batch(**kwargs)
 
     stats_files = [
-        dxpy.upload_local_file(str(csv))
-        for csv in out_dir.glob("*stats.csv")
+        dxpy.upload_local_file(str(csv)) for csv in out_dir.glob("*stats.csv")
     ]
     stats_files = cast(list[dxpy.DXFile], stats_files)
     return {"stats_csvs": stats_files}
+
 
 @dxpy.entry_point("run_sompy_pair")
 def run_sompy_pair(
@@ -168,7 +169,7 @@ def run_sompy_pair(
         "bcftools_image": get_single_file(images, "*bcftools*.gz"),
         "truth": get_single_file(in_dir / "truth", "*vcf*"),
         "query": get_single_file(in_dir / "query", "*vcf*"),
-        "reference": get_single_file(in_dir / "reference", "*")
+        "reference": get_single_file(in_dir / "reference", "*"),
     }
     if panel_bed:
         kwargs["panel_bed"] = get_single_file(in_dir / "panel_bed", "*.bed*")
@@ -178,6 +179,7 @@ def run_sompy_pair(
     stats_csv = get_single_file(out_dir, "*.stats.csv")
     stats_dxfile = dxpy.upload_local_file(stats_csv)
     return {"stats_csv": stats_dxfile}
+
 
 @dxpy.entry_point("gather")
 def gather(sompy_files: list[DXLink]) -> dict[str, dxpy.DXFile]:
@@ -190,6 +192,7 @@ def gather(sompy_files: list[DXLink]) -> dict[str, dxpy.DXFile]:
         "recall_plot": dxpy.upload_local_file(str(recall_plot)),
         "sompy_csv": dxpy.upload_local_file(str(sompy_csv)),
     }
+
 
 if __name__ == "__main__":
     dxpy.run()

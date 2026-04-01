@@ -32,7 +32,9 @@ def mock_sort_inputs(tmp_path: Path, bindmounts: MountConfig) -> CommandConfig:
 
 
 @pytest.fixture(name="bcftools_norm_args")
-def mock_norm_inputs(tmp_path: Path, bcftools_sort_args: CommandConfig) -> CommandConfig:
+def mock_norm_inputs(
+    tmp_path: Path, bcftools_sort_args: CommandConfig
+) -> CommandConfig:
     bcftools_sort_args.update({"reference": tmp_path / "in" / "test_reference.fa"})
     return bcftools_sort_args
 

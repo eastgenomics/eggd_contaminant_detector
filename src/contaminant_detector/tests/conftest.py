@@ -56,8 +56,11 @@ def sompy_df() -> pd.DataFrame:
     sompycmds = [sompycmd(truth, query) for truth, query in pairs]
     recalls = [0.10, 0.15, 0.2, 0.25, 0.5, 0.99]
     vtypes = ["SNVs", "records", "indels"]
-    rows = ((vt, recall, recall - 0.03, cmd)
-            for recall, cmd in zip(recalls, sompycmds) for vt in vtypes)
+    rows = (
+        (vt, recall, recall - 0.03, cmd)
+        for recall, cmd in zip(recalls, sompycmds)
+        for vt in vtypes
+    )
 
     df = pd.DataFrame(rows, columns=("type", "recall", "recall2", "sompycmd"))
     return df

@@ -1,30 +1,39 @@
 from pathlib import Path
 from typing import Callable, cast
 
-import ambergris # type: ignore
+import ambergris  # type: ignore
 
 from . import _commands, _paths
 
-def run_bcftools_norm(image: Path | str, out_dir: Path, vcf: Path, reference: Path) -> Path:
+
+def run_bcftools_norm(
+    image: Path | str, out_dir: Path, vcf: Path, reference: Path
+) -> Path:
     outpath = _run_tool(
         image=image,
         tool=_commands._bcftools_norm,
         out_dir=out_dir,
         vcf=vcf,
-        reference=reference
+        reference=reference,
     )
     return outpath
+
 
 def run_bcftools_sort(image: Path | str, out_dir: Path, vcf: Path) -> Path:
     outpath = _run_tool(
-        image=image,
-        tool=_commands._bcftools_norm,
-        out_dir=out_dir,
-        vcf=vcf
+        image=image, tool=_commands._bcftools_norm, out_dir=out_dir, vcf=vcf
     )
     return outpath
 
-def run_sompy(image: Path | str, out_dir: Path, truth: Path, query: Path, reference: Path, panel_regions: Path) -> Path:
+
+def run_sompy(
+    image: Path | str,
+    out_dir: Path,
+    truth: Path,
+    query: Path,
+    reference: Path,
+    panel_regions: Path,
+) -> Path:
     outpath = _run_tool(
         image=image,
         tool=_commands._sompy,
@@ -32,12 +41,17 @@ def run_sompy(image: Path | str, out_dir: Path, truth: Path, query: Path, refere
         truth=truth,
         query=query,
         reference=reference,
-        panel_regions=panel_regions
+        panel_regions=panel_regions,
     )
     return outpath
 
+
 def _run_tool(
-    image: Path | str, tool: Callable, out_dir: Path, *tool_args: Path, **tool_kwargs: Path
+    image: Path | str,
+    tool: Callable,
+    out_dir: Path,
+    *tool_args: Path,
+    **tool_kwargs: Path,
 ) -> Path:
     """
     Run a tool in a Docker image from a selection (one of ["sompy", "bcftools norm", "bcftools sort"])
@@ -55,7 +69,7 @@ def _run_tool(
     in_dir = _paths._resolve_in_dir(*tool_args, **tool_kwargs)
     out_dir = out_dir.resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
-    mounts = _paths.make_mounts(in_dir, out_dir)
+    mounts = _paths._make_mounts(in_dir, out_dir)
     cmd, outpath = tool(mounts=[*mounts], *tool_args, **tool_kwargs)
     ambergris.run_container(image, cmd, *mounts)
     outpath = cast(Path, outpath)
