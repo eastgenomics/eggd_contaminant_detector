@@ -66,7 +66,7 @@ def run_sompy_pair(
     return sompy_output
 
 
-def run_plot(
+def plot_recall(
     sompy_files: list[Path],
     out_dir: Path,
     slope_params: tuple[float, float, float] = (0.0, 0.4, 1.0),
