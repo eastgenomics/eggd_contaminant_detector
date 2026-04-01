@@ -70,12 +70,12 @@ def plot_recall(
     sompy_files: list[Path],
     out_dir: Path,
     slope_params: tuple[float, float, float] = (0.0, 0.4, 1.0),
-) -> Path:
-    sompy_file_parent = sompy_files[0].parent
-    snv_df = _fs.extract_snvs(sompy_file_parent)
-    agg_output = out_dir
-    agg_output.mkdir(exist_ok=True, parents=True)
-    snv_df.to_csv(agg_output)
+) -> tuple[Path, Path]:
+    sompy_in_dir = sompy_files[0].parent
+    snv_df = _fs.extract_snvs(sompy_in_dir)
+    sompy_data = out_dir / "sompy_data.csv"
+    sompy_data.parent.mkdir(exist_ok=True, parents=True)
+    snv_df.to_csv(sompy_data)
     recall_plot = _plot._generate_comparison_plot(
         df=snv_df,
         metric="recall2",
@@ -83,6 +83,6 @@ def plot_recall(
         # so setting beginning of colour ramp-up to be double that
         slope_params=slope_params,
     )
-    plot_path = Path("plot.png")
+    plot_path = Path(out_dir / "plot.png")
     recall_plot.savefig(plot_path)
-    return plot_path
+    return sompy_data, plot_path
