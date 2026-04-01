@@ -12,6 +12,7 @@ from . import _plot
 def run_sompy_batch(
     out_dir: Path, sompy_image: Path, bcftools_image: Path, data_dir: Path
 ) -> Path:
+    out_dir.mkdir(parents=True, exist_ok=True)
     mounts = ambergris.make_bindmounts(
         (data_dir, Path("/in")),
         (out_dir, Path("/out")),
