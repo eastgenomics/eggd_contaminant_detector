@@ -25,6 +25,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install ".[dev]" 
 
-      - name: Run all tests
+      - name: Run unit tests
         run: |
           pytest src/
+
+      - name: Run type check
+        run: |
+          mypy scripts/
+          mypy src/contaminant_detector/src/
+          mypy src/sompy/src/
+
+      - name: Run format check
+        run: |
+          black --check .
