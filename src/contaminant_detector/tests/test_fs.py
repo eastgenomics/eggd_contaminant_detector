@@ -55,10 +55,12 @@ def test_extract_ref_tar_nested(tmp_path: Path, nested_ref_genome_tar_gz: Path) 
 
 def test_extract_snvs(sompy_csv_dir: Path) -> None:
     snv_df = fs.extract_snvs(sompy_csv_dir)
-    assert len(snv_df) == 3
+    # 2 contam * 3 cand
+    assert len(snv_df) == 6
     assert snv_df["type"].unique() == "SNVs"
 
 
 def test_read_csvs(sompy_csv_dir: Path) -> None:
     df = fs.read_csvs(sompy_csv_dir, pattern="**/*.stats.csv")
-    assert len(df) == 9
+    # 2 contam * 3 cand * 3 row types (snvs, indels, records)
+    assert len(df) == 18

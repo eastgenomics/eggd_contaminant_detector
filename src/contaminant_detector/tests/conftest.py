@@ -33,40 +33,33 @@ def nested_ref_genome_tar_gz(ref_genome_tar_path: Path) -> Path:
 
 @pytest.fixture
 def sompy_df() -> pd.DataFrame:
-    vtype = ["SNVs", "records", "indels"] * 6
-    recall = [0.99] * 6 + [0.5] * 6 + [0.10] * 6
-    recall2 = [r - 0.05 for r in recall]
-
     contam_samples = [
         "123456789-260101S1111-25TSOD10-4321-M",
         "987654321-260101S1112-25TSOD11-4321-F",
-    ] * 9
-
+    ]
     candidates = [
         "123456789-260101S0010-26TSOD01-1234-M",
         "987654321-260101S0011-26TSOD01-1234-F",
         "111222333-260101S0012-26TSOD01-1234-U",
-    ] * 6
-
-    truths = [f"/in/{sample}.vcf.gz" for sample in contam_samples]
-    querys = [f"/in/{sample}.vcf.gz" for sample in candidates]
-
-    core_cmd = "/opt/hap.py/bin/som.py --no-count-unk --no-fixchr-truth --no-fixchr-query --include-nonpass"
-    reference_arg = "--reference /in/reference.fa"
-    commands = [
-        " ".join(
-            [
-                core_cmd,
-                f"-o /out/{truth[4:11]}_{query[4:11]}",
-                reference_arg,
-                truth,
-                query,
-            ]
-        )
-        for truth, query in zip(truths, querys)
     ]
-    pd_data = list(zip(vtype, recall, recall2, commands))
-    df = pd.DataFrame(pd_data, columns=("type", "recall", "recall2", "sompycmd"))
+    pairs = [(t, q) for t in contam_samples for q in candidates]
+
+    def sompycmd(truth: str, query: str) -> str:
+        core_cmd = "/opt/hap.py/bin/som.py --no-count-unk --no-fixchr-truth --no-fixchr-query --include-nonpass"
+        reference_arg = "--reference /in/reference.fa"
+        out = f"-o /out/{truth}_{query}"
+        t_in = f"/in/{truth}.vcf.gz"
+        q_in = f"/in/{query}.vcf.gz"
+        sompycmd = " ".join([core_cmd, out, reference_arg, t_in, q_in])
+        return sompycmd
+
+    sompycmds = [sompycmd(truth, query) for truth, query in pairs]
+    recalls = [0.10, 0.15, 0.2, 0.25, 0.5, 0.99]
+    vtypes = ["SNVs", "records", "indels"]
+    rows = ((vt, recall, recall - 0.03, cmd)
+            for recall, cmd in zip(recalls, sompycmds) for vt in vtypes)
+
+    df = pd.DataFrame(rows, columns=("type", "recall", "recall2", "sompycmd"))
     return df
 
 
@@ -77,7 +70,8 @@ def sompy_csv_dir(sompy_df: pd.DataFrame, tmp_path: Path) -> Path:
     for cmd, table in sompy_df.groupby("sompycmd", sort=False):
         cmd = str(cmd)
         truth_vcf = Path(cmd.split(" ")[9])
-        group_name = truth_vcf.stem.rstrip(".vcf.gz")
+        query_vcf = Path(cmd.split(" ")[10])
+        group_name = f"{truth_vcf.stem.removesuffix(".vcf.gz")}_{query_vcf.stem.removesuffix(".vcf.gz")}"
         table.to_csv(data_parent / f"{group_name}.stats.csv")
     return data_parent
 
@@ -90,7 +84,7 @@ def sompy_snv_df(sompy_df: pd.DataFrame) -> pd.DataFrame:
 
 @pytest.fixture
 def snv_df_plus_names(sompy_snv_df: pd.DataFrame) -> pd.DataFrame:
-    contam_names = ["260101S1111-25TSOD10", "260101S1112-25TSOD11"] * 3
+    contam_names = ["260101S1111-25TSOD10"] * 3 + ["260101S1112-25TSOD11"] * 3
 
     cand_names = [
         "260101S0010-26TSOD01",
