@@ -67,7 +67,7 @@ def validate_reference_args(
     # We're using typing.cast to override the type declaration, as it
     # stops type checkers from raising issues.
     ref_description = cast(dict[str, Any], dxpy.describe(ref_fid))
-    ref_file = Path("/home") / "dnanexus" / "in" / "reference" / ref_description["Name"]
+    ref_file = Path("/home") / "dnanexus" / "in" / "reference" / ref_description["name"]
     if not ref_file.name.endswith(("tar", "tgz", "tar.gz")):
         if not reference_index:
             raise FileNotFoundError(
