@@ -61,7 +61,7 @@ def new_subjob(
 def validate_reference_args(
     reference: DXLink, reference_index: Optional[DXLink] = None
 ) -> None:
-    ref_fid = reference["$dnanexus_link"]["id"]
+    ref_fid = reference["$dnanexus_link"]
     # dxpy.describe's return type hint is (Any | list[Unknown]).
     # This is too broad - it is actually dict[str, Any], or a list thereof.
     # We're using typing.cast to override the type declaration, as it
