@@ -18,7 +18,7 @@ classifiers = [
 ]
 dependencies = [
     "pandas==3.0.1",
-    "ambergris==0.1.0"
+    "ambergris==0.1.0.1"
 ]
 
 [project.optional-dependencies]
