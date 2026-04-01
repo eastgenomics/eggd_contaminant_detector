@@ -79,6 +79,11 @@ def get_file_id(dx_link: DXLink) -> str | DXLinkContent:
     except TypeError:
         return dx_link["$dnanexus_link"]
 
+def get_single_file(parent: Path, pattern: str) -> Path:
+    glob = parent.glob(pattern)
+    file = next(glob)
+    return file
+
 ### Entrypoints
 
 @dxpy.entry_point("main")
@@ -120,19 +125,21 @@ def run_sompy_batch(
     panel_bed: Optional[DXLink] = None,
 ) -> dict[str, list[dxpy.DXFile]]:
     dxpy.download_all_inputs(parallel=True)
+
     dx_home = Path("/home") / "dnanexus"
     in_dir = dx_home / "in"
-    kwargs = {
-        "truths": in_dir / "truths",
-        "queries": in_dir / "queries",
-        "reference": in_dir / "reference"
-    }
-    if ref_index:
-        kwargs["ref_index"] = in_dir / "ref_index"
-    if panel_bed:
-        kwargs["panel_bed"] = in_dir / "panel_bed"
-    contaminant_detector.run_sompy_batch(**kwargs)
     out_dir = dx_home / "out"
+    images = Path("/image")
+
+    kwargs = {
+        "out_dir": out_dir,
+        "sompy_image": get_single_file(images, "*happy*.gz"),
+        "bcftools_image": get_single_file(images, "*bcftools*.gz"),
+        "data_dir": in_dir
+    }
+
+    contaminant_detector.run_sompy_batch(**kwargs)
+
     stats_files = [
         dxpy.upload_local_file(str(csv))
         for csv in out_dir.glob("*stats.csv")
@@ -149,18 +156,39 @@ def run_sompy_pair(
     panel_bed: Optional[DXLink] = None,
 ) -> dict[str, dxpy.DXFile]:
     dxpy.download_all_inputs(parallel=True)
-    kwargs = {}
+
+    dx_home = Path("/home") / "dnanexus"
+    in_dir = dx_home / "in"
+    out_dir = dx_home / "out"
+    images = Path("/image")
+
+    kwargs = {
+        "out_dir": out_dir,
+        "sompy_image": get_single_file(images, "*happy*.gz"),
+        "bcftools_image": get_single_file(images, "*bcftools*.gz"),
+        "truth": get_single_file(in_dir / "truth", "*vcf*"),
+        "query": get_single_file(in_dir / "query", "*vcf*"),
+        "reference": get_single_file(in_dir / "reference", "*")
+    }
+    if panel_bed:
+        kwargs["panel_bed"] = get_single_file(in_dir / "panel_bed", "*.bed*")
+
     contaminant_detector.run_sompy_pair(**kwargs)
-    stats_dxfile = dxpy.upload_local_file()
+
+    stats_csv = get_single_file(out_dir, "*.stats.csv")
+    stats_dxfile = dxpy.upload_local_file(stats_csv)
     return {"stats_csv": stats_dxfile}
 
 @dxpy.entry_point("gather")
 def gather(sompy_files: list[DXLink]) -> dict[str, dxpy.DXFile]:
     dxpy.download_all_inputs(parallel=True)
-    contaminant_detector.plot_recall(**kwargs)
+    sompy_dir = Path("/home") / "dnanexus" / "in"
+    stats_files = [f for f in sompy_dir.rglob("*.stats.csv")]
+    out_dir = Path("/home") / "dnanexus" / "out"
+    sompy_csv, recall_plot = contaminant_detector.plot_recall(stats_files, out_dir)
     return {
-        "recall_plot": dxpy.upload_local_file(str(plot_path)),
-        "sompy_csv": dxpy.upload_local_file(str(agg_output)),
+        "recall_plot": dxpy.upload_local_file(str(recall_plot)),
+        "sompy_csv": dxpy.upload_local_file(str(sompy_csv)),
     }
 
 if __name__ == "__main__":
