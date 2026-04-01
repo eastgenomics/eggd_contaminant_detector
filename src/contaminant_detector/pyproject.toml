@@ -19,19 +19,21 @@ classifiers = [
 dependencies = [
     "pandas==3.0.1",
     "seaborn==0.13.2",
-    "dxpy==0.405.0",
     "ambergris==0.1.0",
     "sompy @ {root:uri}/../sompy"
 ]
 
 [project.scripts]
 run-sompy-pair = "contaminant_detector:run_sompy_pair"
+run-sompy-batch = "contaminant_detector:run_sompy_batch"
+plot-recall = "contaminant_detector:plot_recall"
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
     "black>=24.0.0",
     "mypy>=1.8.0",
+    "pytest-mock",
     "pytest-cov",
     "types-docker",
     "pandas-stubs",
