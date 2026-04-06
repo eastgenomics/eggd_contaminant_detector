@@ -9,13 +9,12 @@ def bcftools_norm() -> str:
             local REFERENCE=$2
             STEM=$(dirname -- $(readlink -e "$VCF"))
             NAME=$(basename -- "$VCF" .vcf.gz)
-            bcftools norm -m-any -f "$REFERENCE" "$VCF" | \
-                bcftools norm -d any -W=tbi -Oz -o "${STEM}/${NAME}.norm.vcf.gz" "$VCF"
+            bcftools norm -m-any -f "$REFERENCE" -d any -W=tbi -Oz -o "${STEM}/${NAME}.norm.vcf.gz" "$VCF"
         }
 
         TRUTH_VCFS=($(find /in/truths -type f -name "*.vcf.gz"))
         QUERY_VCFS=($(find /in/queries -type f -name "*.vcf.gz"))
-        REFERENCE=$(find /in/reference -type f ! -name "*.fai" ! -name "*.gzi" | head -n 1)
+        REFERENCE=$(find /in/reference -type f ! -name "*.tar.gz" ! -name "*.fai" ! -name "*.gzi")
         for TRUTH in "${TRUTH_VCFS[@]}"; do
             bcftools_norm "$TRUTH" "$REFERENCE"
         done
@@ -36,8 +35,8 @@ def bcftools_sort() -> str:
             bcftools sort -W=tbi -Oz -o "${STEM}/${NAME}.sorted.vcf.gz" "$VCF"
         }
 
-        TRUTH_VCFS=($(find /in/truths -type f -name "*.vcf.gz"))
-        QUERY_VCFS=($(find /in/queries -type f -name "*.vcf.gz"))
+        TRUTH_VCFS=($(find /in/truths -type f -name "*.norm.vcf.gz"))
+        QUERY_VCFS=($(find /in/queries -type f -name "*.norm.vcf.gz"))
         for TRUTH in "${TRUTH_VCFS[@]}"; do
             bcftools_sort "$TRUTH"
         done
@@ -53,15 +52,14 @@ def sompy() -> str:
         set -e
         TRUTH_VCFS=($(find /in/truths -type f -name "*sorted.vcf.gz"))
         QUERY_VCFS=($(find /in/queries -type f -name "*sorted.vcf.gz"))
-        REFERENCE=$(find /in/reference -type f ! -name "*.fai" ! -name "*.gzi" | head -n 1)
-        PANEL_BED=$( [ -d "/in/panel_bed" ] && find "/in/panel_bed" -type f -name "*.bed*" | head -n 1 )
+        REFERENCE=$(find /in/reference -type f ! -name "*.tar.gz" ! -name "*.fai" ! -name "*.gzi")
+        PANEL_BED=$( [ -d "/in/panel_bed" ] && find "/in/panel_bed" -type f -name "*.bed*")
 
         ARGS=(
             --no-count-unk
             --no-fixchr-truth
             --no-fixchr-query
             --include-nonpass
-            --normalize-all
             --reference "$REFERENCE"
         )
         
