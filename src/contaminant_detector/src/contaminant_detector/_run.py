@@ -10,7 +10,7 @@ from . import _plot
 
 
 def run_sompy_batch(
-    out_dir: Path, sompy_image: Path, bcftools_image: Path, data_dir: Path
+    sompy_image: Path | str, bcftools_image: Path | str, data_dir: Path, out_dir: Path
 ) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     mounts = ambergris.make_bindmounts(
@@ -38,29 +38,30 @@ def run_sompy_pair(
     reference: Path,
     panel_bed: Optional[Path] = None,
 ) -> Path:
-    vcfs = {"truth": truth, "query": query}
+    in_vcfs = {"truth": truth, "query": query}
+    out_vcfs = {}
     norm_dir = out_dir / "normalised"
     norm_dir.mkdir(parents=True, exist_ok=True)
     sort_dir = out_dir / "sorted"
     sort_dir.mkdir(parents=True, exist_ok=True)
 
-    for group, vcf in vcfs.items():
+    for group, vcf in in_vcfs.items():
         normalised_vcf = sompy.run_bcftools_norm(
             bcftools_image, out_dir=norm_dir, vcf=vcf, reference=reference
         )
-        vcfs[f"sorted_{group}"] = sompy.run_bcftools_sort(
+        out_vcfs[f"sorted_{group}"] = sompy.run_bcftools_sort(
             bcftools_image, out_dir=sort_dir, vcf=normalised_vcf
         )
 
     kwargs = {
-        "sompy_image": sompy_image,
+        "image": sompy_image,
         "out_dir": out_dir,
-        "truth": vcfs["sorted_truth"],
-        "query": vcfs["sorted_query"],
+        "truth": out_vcfs["sorted_truth"],
+        "query": out_vcfs["sorted_query"],
         "reference": reference,
     }
     if panel_bed:
-        kwargs["panel_bed"] = panel_bed
+        kwargs["panel_regions"] = panel_bed
 
     sompy.run_sompy(**kwargs)
     sompy_output = next(out_dir.glob("*.stats.csv"))
