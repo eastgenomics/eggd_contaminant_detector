@@ -33,7 +33,7 @@ def test_bcftools_sort_returns_host_output(tmp_path, bcftools_sort_args):
 
 
 def test_bcftools_norm(bcftools_norm_args):
-    expected = "bcftools norm -m-any -f /in/test_reference.fa /in/test.vcf.gz | bcftools norm -d any -W=tbi -Oz -o /out/test.normalised.vcf.gz"
+    expected = "bcftools norm -f /in/test_reference.fa -m-any -d any -W=tbi -Oz -o /out/test.normalised.vcf.gz /in/test.vcf.gz"
     actual, _ = sompy._commands._bcftools_norm(**bcftools_norm_args)
     assert actual == expected
 

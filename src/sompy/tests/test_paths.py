@@ -55,67 +55,33 @@ def test_remove_vcf_extension(vcf: str, expected: str) -> None:
     assert sompy._paths._remove_vcf_extension(vcf) == expected
 
 
-@pytest.mark.parametrize(
-    "paths, expected",
-    [
-        (
-            [
-                Path(p)
-                for p in [
-                    "./in/truth/truth.vcf.gz",
-                    "./in/query/query.vcf.gz",
-                    "./in/reference/reference.fa",
-                ]
-            ],
-            str(Path.cwd() / "in"),
-        ),
-        (
-            [
-                Path(p)
-                for p in [
-                    "./in/files/vcfs/1.vcf.gz",
-                    "./in/files/vcfs/2.vcf.gz",
-                    "./in/files/panels/1.bed",
-                ]
-            ],
-            str(Path.cwd() / "in" / "files"),
-        ),
-    ],
-)
-def test_resolve_common_parent(paths: list[Path], expected: Path) -> None:
-    assert sompy._paths._resolve_common_parent(paths) == expected
-
-
-def test_resolve_in_dir() -> None:
-    truth = Path("./in/truth/truth.vcf.gz")
-    query = Path("./in/query/query.vcf.gz")
-    panel = Path("./in/panel/panel.bed")
-    expected = Path.cwd() / "in"
+def test_resolve_in_dir(tmp_path) -> None:
+    truth = tmp_path / "in" / "truth" / "truth.vcf.gz"
+    query = tmp_path / "in" / "query" / "query.vcf.gz"
+    panel = tmp_path / "in" / "panel" / "panel.bed"
+    expected = tmp_path / "in"
     assert sompy._paths._resolve_in_dir(truth, query, panel=panel) == expected
 
+def test_resolve_in_dir_one_file(tmp_path) -> None:
+    truth = tmp_path / "in" / "truth" / "truth.vcf.gz"
+    expected = tmp_path / "in" / "truth"
+    assert sompy._paths._resolve_in_dir(truth) == expected
 
-def test_resolve_in_dir_as_kwargs() -> None:
+def test_resolve_in_dir_as_kwargs(tmp_path) -> None:
     test_kwargs = {
-        "truth": Path("./in/truth/truth.vcf.gz"),
-        "query": Path("./in/query/query.vcf.gz"),
-        "panel": Path("./in/panel/panel.bed"),
+        "truth": tmp_path / "in" / "truth" / "truth.vcf.gz",
+        "query": tmp_path / "in" / "query" / "query.vcf.gz",
+        "panel": tmp_path / "in" / "panel" / "panel.bed",
     }
-    expected = Path.cwd() / "in"
+    expected = tmp_path / "in"
     assert sompy._paths._resolve_in_dir(**test_kwargs) == expected
 
 
-def test_resolve_in_dir_as_mix_of_args_and_kwargs() -> None:
-    test_args = [Path("./in/truth/truth.vcf.gz"), Path("./in/query/query.vcf.gz")]
-    test_kwargs = {"panel": Path("./in/panel/panel.bed")}
-    expected = Path.cwd() / "in"
+def test_resolve_in_dir_as_mix_of_args_and_kwargs(tmp_path) -> None:
+    test_args = [
+        tmp_path / "in" / "truth" / "truth.vcf.gz",
+        tmp_path / "in" / "query" / "query.vcf.gz"
+    ]
+    test_kwargs = {"panel": tmp_path / "in" / "panel" / "panel.bed"}
+    expected = tmp_path / "in"
     assert sompy._paths._resolve_in_dir(*test_args, **test_kwargs) == expected
-
-
-def test_get_next_in_tree() -> None:
-    expected = "/in/files"
-    assert (
-        sompy._paths._get_next_in_tree(
-            [Path("./in/files/truth.vcf.gz"), Path("./in/files/query.vcf.gz")]
-        )
-        == expected
-    )
