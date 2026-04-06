@@ -21,7 +21,7 @@ def run_bcftools_norm(
 
 def run_bcftools_sort(image: Path | str, out_dir: Path, vcf: Path) -> Path:
     outpath = _run_tool(
-        image=image, tool=_commands._bcftools_norm, out_dir=out_dir, vcf=vcf
+        image=image, tool=_commands._bcftools_sort, out_dir=out_dir, vcf=vcf
     )
     return outpath
 
