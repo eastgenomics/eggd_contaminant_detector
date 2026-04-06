@@ -1,3 +1,4 @@
+import os
 import re
 from pathlib import Path
 
@@ -8,29 +9,11 @@ from docker.types import Mount
 def _resolve_in_dir(*tool_args: Path, **tool_kwargs: Path) -> Path:
     all_args = list(tool_args) + list(tool_kwargs.values())
     paths = [Path(arg) for arg in all_args if isinstance(arg, (str, Path))]
-    common_parent = _resolve_common_parent(paths)
-    return Path(common_parent)
-
-
-def _resolve_common_parent(paths: list[Path]) -> str:
-    resolved_paths = [p.resolve() for p in paths]
-    return _get_next_in_tree(resolved_paths)
-
-
-def _get_next_in_tree(paths: list[Path], current_root: str = "") -> str:
-    parts = [p.parts for p in paths]
-    roots = ["/" + p[0] for p in parts]
-    stems = [Path("/".join(p[1:])) for p in parts]
-    roots_set = set(roots)
-    if len(roots_set) == 1:
-        current_root = current_root + str(list(roots_set)[0])
-        if current_root == "//":
-            final_root = _get_next_in_tree(stems, "")
-        else:
-            final_root = _get_next_in_tree(stems, current_root)
+    if len(paths) == 1:
+        common_parent = paths[0].parent
     else:
-        return current_root
-    return final_root
+        common_parent = os.path.commonpath(paths)
+    return Path(common_parent).resolve()
 
 
 def _get_out_dir(*mounts: Mount, key: str = "Source") -> Path:
