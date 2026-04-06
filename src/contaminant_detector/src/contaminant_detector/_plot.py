@@ -14,7 +14,7 @@ def _generate_comparison_plot(
     metric: str,
     colour_scheme: str = "YlOrRd",
     slope_params: Optional[tuple[float, float, float]] = None,
-    figsize: tuple[int, int] = (10, 6),
+    figsize: tuple[int, int] = (18, 6),
 ) -> Figure:
     """
     If the data contains only one unique entry in group A, a barplot is generated.
