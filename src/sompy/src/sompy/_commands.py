@@ -59,19 +59,16 @@ def _bcftools_norm(
         [
             "bcftools",
             "norm",
-            "-m-any",
             "-f",
             str(reference),
-            str(vcf),
-            "|",
-            "bcftools",
-            "norm",
+            "-m-any",
             "-d",
             "any",
             "-W=tbi",
             "-Oz",
             "-o",
             str(c_out / normalised_vcf),
+            str(vcf)
         ]
     )
     return cmd, h_out / normalised_vcf
