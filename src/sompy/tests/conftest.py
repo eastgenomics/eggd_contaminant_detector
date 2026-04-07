@@ -57,28 +57,3 @@ def mock_sompy_inputs_with_regions(
 ) -> CommandConfig:
     sompy_args_without_regions.update({"panel_regions": tmp_path / "in" / "panel.bed"})
     return sompy_args_without_regions
-
-
-@pytest.fixture(name="sompy_df")
-def mock_sompy_df() -> pd.DataFrame:
-    groups = ["a", "b", "c", "d", "e"]
-    suffices = ["vcf.gz", "vcf", "g.vcf.gz", "gvcf", "gvcf.gz"]
-    truths = [f"/in/truth_{group}.{suffix}" for group, suffix in zip(groups, suffices)]
-    querys = [f"/in/query_{group}.{suffix}" for group, suffix in zip(groups, suffices)]
-
-    core_cmd = "/opt/hap.py/bin/som.py --no-count-unk --no-fixchr-truth --no-fixchr-query --include-nonpass"
-    reference_arg = "--reference /in/reference.fa"
-    commands = [
-        " ".join(
-            [
-                core_cmd,
-                f"-o /out/{truth[4:11]}_{query[4:11]}",
-                reference_arg,
-                truth,
-                query,
-            ]
-        )
-        for truth, query in zip(truths, querys)
-    ]
-    pd_data = list(zip(truths, querys, commands))
-    return pd.DataFrame(pd_data, columns=("truth", "query", "sompycmd"))
