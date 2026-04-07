@@ -110,10 +110,11 @@ def main(
     agg_job = new_subjob(
         fn_name="gather", inputs={"sompy_files": sompy_refs}, priority=priority
     )
-    agg_ref = cast(DXLink, agg_job.get_output_ref("recall_plot"))
+    agg_plot_ref = cast(DXLink, agg_job.get_output_ref("recall_plot"))
+    agg_csv_ref = cast(DXLink, agg_job.get_output_ref("sompy_csv"))
     return {
-        "sompy_csv": sompy_refs,
-        "recall_plot": agg_ref,
+        "sompy_csv": agg_csv_ref,
+        "recall_plot": agg_plot_ref,
     }
 
 
