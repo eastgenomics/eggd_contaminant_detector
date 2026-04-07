@@ -12,8 +12,8 @@ def _resolve_in_dir(*tool_args: Path, **tool_kwargs: Path) -> Path:
     if len(paths) == 1:
         common_parent = paths[0].parent
     else:
-        common_parent = os.path.commonpath(paths)
-    return Path(common_parent).resolve()
+        common_parent = Path(os.path.commonpath(paths))
+    return common_parent.resolve()
 
 
 def _get_out_dir(*mounts: Mount, key: str = "Source") -> Path:
