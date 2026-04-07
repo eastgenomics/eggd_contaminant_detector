@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Optional
 
-import ambergris  # type: ignore
+import ambergris
 
 from . import _paths, _heredocs
 
