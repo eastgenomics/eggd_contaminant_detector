@@ -104,3 +104,28 @@ def snv_df_one_sample(snv_df_plus_names: pd.DataFrame) -> pd.DataFrame:
     return snv_df_plus_names[
         snv_df_plus_names["contaminated_samples"] == "260101S1112-25TSOD11"
     ]
+
+
+@pytest.fixture
+def abstract_sompy_df() -> pd.DataFrame:
+    groups = ["a", "b", "c", "d", "e"]
+    suffices = ["vcf.gz", "vcf", "g.vcf.gz", "gvcf", "gvcf.gz"]
+    truths = [f"/in/truth_{group}.{suffix}" for group, suffix in zip(groups, suffices)]
+    querys = [f"/in/query_{group}.{suffix}" for group, suffix in zip(groups, suffices)]
+
+    core_cmd = "/opt/hap.py/bin/som.py --no-count-unk --no-fixchr-truth --no-fixchr-query --include-nonpass"
+    reference_arg = "--reference /in/reference.fa"
+    commands = [
+        " ".join(
+            [
+                core_cmd,
+                f"-o /out/{truth[4:11]}_{query[4:11]}",
+                reference_arg,
+                truth,
+                query,
+            ]
+        )
+        for truth, query in zip(truths, querys)
+    ]
+    pd_data = list(zip(truths, querys, commands))
+    return pd.DataFrame(pd_data, columns=("truth", "query", "sompycmd"))

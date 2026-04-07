@@ -1,3 +1,4 @@
+import pytest
 from pathlib import Path
 
 import contaminant_detector._fs as fs
@@ -58,6 +59,25 @@ def test_extract_snvs(sompy_csv_dir: Path) -> None:
     # 2 contam * 3 cand
     assert len(snv_df) == 6
     assert snv_df["type"].unique() == "SNVs"
+
+
+@pytest.mark.parametrize(
+    "vcf, expected",
+    [
+        ("sample.sorted.vcf.gz", "sample"),
+        ("sample.g.vcf.gz", "sample"),
+        ("sample.vcf", "sample"),
+        ("sample.vcf.gz", "sample"),
+        ("sample.gvcf.gz", "sample"),
+        (
+            "123456789-25001K0001-25PCAN1-10001-U.vcf.gz",
+            "123456789-25001K0001-25PCAN1-10001-U",
+        ),
+        (Path("path/to/file.vcf"), "file"),
+    ],
+)
+def test_remove_vcf_extension(vcf: str, expected: str) -> None:
+    assert fs.remove_vcf_extension(vcf) == expected
 
 
 def test_read_csvs(sompy_csv_dir: Path) -> None:
