@@ -40,7 +40,7 @@ def launch_sompy_jobs(
             fn_name="run_sompy_batch",
             inputs={
                 "truths": contaminated_samples,
-                "queries": candidates,
+                "querys": candidates,
                 **static_inputs,
             },
             priority=priority,
@@ -121,7 +121,7 @@ def main(
 @dxpy.entry_point("run_sompy_batch")
 def run_sompy_batch(
     truths: list[DXLink],
-    queries: list[DXLink],
+    querys: list[DXLink],
     reference: DXLink,
     ref_index: Optional[DXLink] = None,
     panel_bed: Optional[DXLink] = None,
@@ -134,13 +134,20 @@ def run_sompy_batch(
     images = Path("/image")
 
     kwargs = {
+        "truths": [f for f in (in_dir / "truths").rglob("*.vcf.gz")],
+        "querys": [f for f in (in_dir / "queries").rglob("*.vcf.gz")],
+        "reference": get_single_file(in_dir / "reference", "*"),
         "out_dir": out_dir,
         "sompy_image": get_single_file(images, "*happy*.gz"),
         "bcftools_image": get_single_file(images, "*bcftools*.gz"),
-        "data_dir": in_dir,
     }
 
-    contaminant_detector.run_sompy_batch(**kwargs)
+    if panel_bed:
+        kwargs["panel_bed"] = get_single_file(in_dir / "panel_bed", "*.bed*")
+    if ref_index:
+        kwargs["ref_index"] = get_single_file(in_dir / "ref_index", "*.fai")
+
+    contaminant_detector.run_contam_check(**kwargs)
 
     stats_files = [
         dxpy.upload_local_file(str(csv)) for csv in out_dir.glob("*stats.csv")
@@ -165,17 +172,20 @@ def run_sompy_pair(
     images = Path("/image")
 
     kwargs = {
+        "truths": [get_single_file(in_dir / "truth", "*vcf*")],
+        "querys": [get_single_file(in_dir / "query", "*vcf*")],
+        "reference": get_single_file(in_dir / "reference", "*"),
         "out_dir": out_dir,
         "sompy_image": get_single_file(images, "*happy*.gz"),
         "bcftools_image": get_single_file(images, "*bcftools*.gz"),
-        "truth": get_single_file(in_dir / "truth", "*vcf*"),
-        "query": get_single_file(in_dir / "query", "*vcf*"),
-        "reference": get_single_file(in_dir / "reference", "*"),
     }
+
     if panel_bed:
         kwargs["panel_bed"] = get_single_file(in_dir / "panel_bed", "*.bed*")
+    if ref_index:
+        kwargs["ref_index"] = get_single_file(in_dir / "ref_index", "*.fai")
 
-    contaminant_detector.run_sompy_pair(**kwargs)
+    contaminant_detector.run_contam_check(**kwargs)
 
     stats_csv = get_single_file(out_dir, "*.stats.csv")
     stats_dxfile = dxpy.upload_local_file(stats_csv)
