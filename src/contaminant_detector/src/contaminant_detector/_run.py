@@ -69,12 +69,11 @@ def run_sompy_pair(
 
 
 def plot_recall(
-    sompy_files: list[Path],
+    in_dir: Path,
     out_dir: Path,
     slope_params: tuple[float, float, float] = (0.0, 0.4, 1.0),
 ) -> tuple[Path, Path]:
-    sompy_in_dir = sompy_files[0].parent
-    snv_df = _fs.extract_snvs(sompy_in_dir)
+    snv_df = _fs.extract_snvs(in_dir)
     sompy_data = out_dir / "sompy_data.csv"
     sompy_data.parent.mkdir(exist_ok=True, parents=True)
     snv_df.to_csv(sompy_data)

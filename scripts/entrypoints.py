@@ -184,10 +184,9 @@ def run_sompy_pair(
 @dxpy.entry_point("gather")
 def gather(sompy_files: list[DXLink]) -> dict[str, dxpy.DXFile]:
     dxpy.download_all_inputs(parallel=True)
-    sompy_dir = Path("/home") / "dnanexus" / "in"
-    stats_files = [f for f in sompy_dir.rglob("*.stats.csv")]
+    in_dir = Path("/home") / "dnanexus" / "in"
     out_dir = Path("/home") / "dnanexus" / "out"
-    sompy_csv, recall_plot = contaminant_detector.plot_recall(stats_files, out_dir)
+    sompy_csv, recall_plot = contaminant_detector.plot_recall(in_dir, out_dir)
     return {
         "recall_plot": dxpy.upload_local_file(str(recall_plot)),
         "sompy_csv": dxpy.upload_local_file(str(sompy_csv)),

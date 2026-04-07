@@ -56,13 +56,13 @@ def extract_ref_tar(ref_path: Path, destination: Path) -> None:
 
 
 def extract_snvs(input_path: Path) -> pd.DataFrame:
-    sompy_df = read_csvs(input_path, pattern="**/*.stats.csv")
+    sompy_df = read_csvs(input_path, pattern="*.stats.csv")
     parsed_df = sompy.parse_samples(sompy_df)
     snvs: pd.DataFrame = parsed_df[parsed_df["type"] == "SNVs"]
     return snvs
 
 
 def read_csvs(path: Path, pattern: str) -> pd.DataFrame:
-    files = path.glob(pattern)
+    files = path.rglob(pattern)
     df = pd.concat([pd.read_csv(f) for f in files])
     return df
