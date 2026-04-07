@@ -3,3 +3,4 @@ python-deps/resources
 bcftools-image/resources
 __pycache__
 *venv/
+.vscode
