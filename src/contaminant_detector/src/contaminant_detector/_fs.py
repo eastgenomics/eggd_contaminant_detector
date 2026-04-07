@@ -1,41 +1,27 @@
+import re
 import tarfile
 import pandas as pd
+from functools import reduce
 from pathlib import Path
 from typing import Optional
 
-import sompy  # type: ignore
+from . import _dataframe
 
 
-def setup_ref_from_data_dir(data_dir: Path) -> None:
-    ref_exts = ["*.fa", "*.fa.gz", "*.fasta", "*.fasta.gz", "*.tar*"]
-    ref_dir = data_dir / "reference"
-    refs = [f for ext in ref_exts for f in ref_dir.glob(ext)]
-
-    ind_exts = ["*.fai", "*.gzi"]
-    inds = (f for ext in ind_exts for f in data_dir.rglob(f"**/{ext}"))
-    try:
-        index_path = next(inds)
-    except StopIteration:
-        index_path = None
-
-    if len(refs) == 0:
-        raise ValueError(f"No reference found in {str(data_dir)}/reference/")
-    elif len(refs) > 1:
-        errormsg = f"Multiple possible reference files found in {str(data_dir)}/reference/:\n{refs}"
-        raise ValueError(errormsg)
-    else:
-        ref_path = refs[0]
-        setup_reference(ref_path, index_path)
-
-
-def setup_reference(reference: Path, index: Optional[Path] = None) -> None:
+def setup_reference(reference: Path, index: Optional[Path] = None) -> Path:
     if reference.name.endswith((".tar", ".tar.gz", ".tgz")):
         extract_ref_tar(reference, reference.parent)
+        fasta_exts = (".fa", ".fasta", ".fna", ".fa.gz", ".fasta.gz")
+        generators = [reference.parent.glob(f"*{ext}") for ext in fasta_exts]
+        unpacked = [[f for f in g] for g in generators]
+        processed_ref = reduce(lambda x, y: x + y, unpacked)[0]
     else:
         if index:
             index.rename(reference.parent / index.name)
+            processed_ref = reference
         else:
             raise ValueError("No index provided")
+    return processed_ref.resolve()
 
 
 def extract_ref_tar(ref_path: Path, destination: Path) -> None:
@@ -57,9 +43,14 @@ def extract_ref_tar(ref_path: Path, destination: Path) -> None:
 
 def extract_snvs(input_path: Path) -> pd.DataFrame:
     sompy_df = read_csvs(input_path, pattern="*.stats.csv")
-    parsed_df = sompy.parse_samples(sompy_df)
+    parsed_df = _dataframe.parse_samples(sompy_df)
     snvs: pd.DataFrame = parsed_df[parsed_df["type"] == "SNVs"]
     return snvs
+
+
+def remove_vcf_extension(vcf: Path | str) -> str:
+    vcf_name = Path(vcf).name
+    return re.sub(r"(\.sorted)?\.(?:g\.)?g?vcf(?:\.gz)?$", "", vcf_name)
 
 
 def read_csvs(path: Path, pattern: str) -> pd.DataFrame:

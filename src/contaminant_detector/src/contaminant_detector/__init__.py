@@ -1,3 +1,3 @@
-from ._run import run_sompy_pair, run_sompy_batch, plot_recall
+from ._core import run_contam_check, plot_recall
 
-__all__ = ["run_sompy_pair", "run_sompy_batch", "plot_recall"]
+__all__ = ["run_contam_check", "plot_recall"]
