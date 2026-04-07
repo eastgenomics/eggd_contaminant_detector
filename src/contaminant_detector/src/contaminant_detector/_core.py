@@ -46,8 +46,6 @@ def plot_recall(
     recall_plot = _plot._generate_comparison_plot(
         df=snv_df,
         metric="recall2",
-        # Average recall value between non-contaminated samples is 0.2
-        # so setting beginning of colour ramp-up to be double that
         slope_params=slope_params,
     )
     plot_path = Path(out_dir / "plot.png")
