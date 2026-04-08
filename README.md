@@ -204,7 +204,7 @@ This means that the app's dependencies (listed in pyproject.toml) include this a
 Assumes you have already pulled or fetched a tarball of `pkrusche/hap.py`. If you already have a tarball of the docker image, replace `docker save` with `mv`.
 
 ```
-mkdir -p ./happy-image/resource/image/
+mkdir -p ./happy-image/resources/image/
 docker save pkrusche/hap.py:v0.3.9 | gzip > happy-image/resources/image/happy_docker.tar.gz
 dx build_asset happy-image
 ```
@@ -216,7 +216,7 @@ The job will return a record ID; edit `dxapp.json` and replace the previous ID u
 Assumes you have already pulled or fetched a tarball of `staphb/bcftools`. If you already have a tarball of the docker image, replace `docker save` with `mv`.
 
 ```
-mkdir -p ./bcftools-image/resource/image/
+mkdir -p ./bcftools-image/resources/image/
 docker save staphb/bcftools | gzip > happy-image/resources/image/bcftools-image.tar.gz
 dx build_asset bcftools-image
 ```
