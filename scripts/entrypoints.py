@@ -135,7 +135,7 @@ def run_sompy_batch(
 
     kwargs = {
         "truths": [f for f in (in_dir / "truths").rglob("*.vcf.gz")],
-        "querys": [f for f in (in_dir / "queries").rglob("*.vcf.gz")],
+        "querys": [f for f in (in_dir / "querys").rglob("*.vcf.gz")],
         "reference": _get_single_file(in_dir / "reference", "*"),
         "out_dir": out_dir,
         "sompy_image": _get_single_file(images, "*happy*.gz"),
