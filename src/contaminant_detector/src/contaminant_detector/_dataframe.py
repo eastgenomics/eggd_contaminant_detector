@@ -44,7 +44,7 @@ def get_sample_name(sompycmd: str, sample: str = "truth") -> str:
         raise ValueError("Invalid key to `sample`: pick one of `truth`, `query`")
 
     vcf = vcf_path.split("/")[-1]
-    sample_name = vcf.removesuffix(".vcf.gz")
+    sample_name = _fs.remove_vcf_extension(vcf)
     return sample_name
 
 

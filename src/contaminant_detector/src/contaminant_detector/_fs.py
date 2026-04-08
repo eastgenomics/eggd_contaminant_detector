@@ -50,8 +50,8 @@ def extract_snvs(input_path: Path) -> pd.DataFrame:
 
 def remove_vcf_extension(vcf: Path | str) -> str:
     vcf_name = Path(vcf).name
-    return re.sub(r"(\.sorted)?\.(?:g\.)?g?vcf(?:\.gz)?$", "", vcf_name)
-
+    pattern = r"(\.norm\.sorted|\.sorted)?\.(?:g\.)?g?vcf(?:\.gz)?$"
+    return re.sub(pattern, "", vcf_name)
 
 def read_csvs(path: Path, pattern: str) -> pd.DataFrame:
     files = path.rglob(pattern)
