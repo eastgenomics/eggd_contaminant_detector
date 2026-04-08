@@ -74,7 +74,7 @@ def sompy_csv_dir(sompy_df: pd.DataFrame, tmp_path: Path) -> Path:
         cmd = str(cmd)
         truth_vcf = Path(cmd.split(" ")[9])
         query_vcf = Path(cmd.split(" ")[10])
-        group_name = f"{truth_vcf.stem.removesuffix(".vcf.gz")}_{query_vcf.stem.removesuffix(".vcf.gz")}"
+        group_name = f"{truth_vcf.name.removesuffix(".vcf.gz")}_{query_vcf.name.removesuffix(".vcf.gz")}"
         table.to_csv(data_parent / f"{group_name}.stats.csv")
     return data_parent
 
