@@ -36,6 +36,13 @@ def test_resolve_in_dir_one_file(tmp_path) -> None:
     assert sompy._paths.resolve_in_dir(truth) == expected
 
 
+def test_resolve_in_dir_splat(tmp_path) -> None:
+    truth = tmp_path / "in" / "truth" / "truth.vcf.gz"
+    query = tmp_path / "in" / "query" / "query.vcf.gz"
+    reference = tmp_path / "in" / "reference" / "reference.fa"
+    expected = tmp_path / "in"
+    assert sompy._paths.resolve_in_dir(*[truth, query], reference)
+
 def test_resolve_in_dir_as_kwargs(tmp_path) -> None:
     test_kwargs = {
         "truth": tmp_path / "in" / "truth" / "truth.vcf.gz",
