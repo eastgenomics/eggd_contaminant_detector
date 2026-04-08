@@ -24,7 +24,7 @@ def run_contam_check(
 
     This function runs comparisons of query VCFs against truthset VCFs using som.py.
     It automatically maps host paths to container paths. It optionally performs
-    preprocessing for input santisation using bcftools before running som.py - specifically,
+    preprocessing for input sanitisation using bcftools before running som.py - specifically,
     bcftools is used to normalise (decomposing multiallelic variants and removing
     duplicates) and sort the input before running through som.py. This operation is performed
     on both truth and query lists if requested.
