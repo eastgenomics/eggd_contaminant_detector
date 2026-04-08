@@ -53,6 +53,7 @@ def remove_vcf_extension(vcf: Path | str) -> str:
     pattern = r"(\.norm\.sorted|\.sorted)?\.(?:g\.)?g?vcf(?:\.gz)?$"
     return re.sub(pattern, "", vcf_name)
 
+
 def read_csvs(path: Path, pattern: str) -> pd.DataFrame:
     files = path.rglob(pattern)
     df = pd.concat([pd.read_csv(f) for f in files])
