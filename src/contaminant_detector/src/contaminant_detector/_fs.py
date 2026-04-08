@@ -10,11 +10,7 @@ from . import _dataframe
 
 def setup_reference(reference: Path, index: Optional[Path] = None) -> Path:
     if reference.name.endswith((".tar", ".tar.gz", ".tgz")):
-        extract_ref_tar(reference, reference.parent)
-        fasta_exts = (".fa", ".fasta", ".fna", ".fa.gz", ".fasta.gz")
-        generators = [reference.parent.glob(f"*{ext}") for ext in fasta_exts]
-        unpacked = [[f for f in g] for g in generators]
-        processed_ref = reduce(lambda x, y: x + y, unpacked)[0]
+        processed_ref = extract_ref_tar(reference, reference.parent)
     else:
         if index:
             index.rename(reference.parent / index.name)
@@ -24,7 +20,7 @@ def setup_reference(reference: Path, index: Optional[Path] = None) -> Path:
     return processed_ref.resolve()
 
 
-def extract_ref_tar(ref_path: Path, destination: Path) -> None:
+def extract_ref_tar(ref_path: Path, destination: Path) -> Path:
     destination.mkdir(parents=True, exist_ok=True)
     destination_root = destination.resolve()
     with tarfile.open(ref_path) as tar:
@@ -39,6 +35,7 @@ def extract_ref_tar(ref_path: Path, destination: Path) -> None:
         for member in [fasta_m, index_m]:
             member.name = Path(member.name).name
         tar.extractall(members=[fasta_m, index_m], path=destination_root, filter="data")
+    return destination_root / Path(fasta_m.name).name
 
 
 def extract_snvs(input_path: Path) -> pd.DataFrame:

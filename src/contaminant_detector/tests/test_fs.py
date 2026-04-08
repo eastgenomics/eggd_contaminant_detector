@@ -8,12 +8,13 @@ def test_setup_reference_with_tar(tmp_path: Path, ref_genome_tar_gz: Path) -> No
     expected_reference_genome = tmp_path / "reference" / "genome.fa"
     expected_ref_index = tmp_path / "reference" / "genome.fa.fai"
 
-    fs.setup_reference(ref_genome_tar_gz)
+    actual_genome_path = fs.setup_reference(ref_genome_tar_gz)
 
     assert expected_reference_genome.is_file()
     assert expected_reference_genome.exists()
     assert expected_ref_index.is_file()
     assert expected_ref_index.exists()
+    assert expected_reference_genome == actual_genome_path
 
 
 def test_setup_reference_moves_index(tmp_path: Path) -> None:
@@ -36,11 +37,12 @@ def test_extract_ref_tar(tmp_path: Path, ref_genome_tar_gz: Path) -> None:
     expected_reference_genome = tmp_path / "reference" / "genome.fa"
     expected_ref_index = tmp_path / "reference" / "genome.fa.fai"
 
-    fs.extract_ref_tar(ref_genome_tar_gz, ref_genome_tar_gz.parent)
+    actual_genome_path = fs.extract_ref_tar(ref_genome_tar_gz, ref_genome_tar_gz.parent)
     assert expected_reference_genome.is_file()
     assert expected_reference_genome.exists()
     assert expected_ref_index.is_file()
     assert expected_reference_genome.exists()
+    assert expected_reference_genome == actual_genome_path
 
 
 def test_extract_ref_tar_nested(tmp_path: Path, nested_ref_genome_tar_gz: Path) -> None:
