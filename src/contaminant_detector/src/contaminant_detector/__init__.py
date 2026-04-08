@@ -1,3 +1,3 @@
-from ._core import run_contam_check, plot_recall
+from ._core import plot_recall, run_contam_check
 
-__all__ = ["run_contam_check", "plot_recall"]
+__all__ = ["plot_recall", "run_contam_check"]
