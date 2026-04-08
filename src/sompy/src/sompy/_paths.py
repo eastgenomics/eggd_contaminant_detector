@@ -63,11 +63,25 @@ def write_paths(
 
 
 def get_output_path(out_dir: Path, pattern: str) -> Path:
+    """
+    Fetches output path of file matching pattern, or common parent directory
+    of files if multiple matches found.
+
+    Args:
+        out_dir: Path object pointing to the output directory
+        pattern: string object representing the glob file pattern
+
+    Returns:
+        Path object pointing to file, or common parent directory if multiple matches found
+
+    Raises:
+        FileNotFoundError: If no files found matching the submitted pattern
+    """
     files = [f for f in out_dir.glob(pattern)]
     if len(files) == 1:
         output_path = files[0]
     elif len(files) > 1:
         output_path = Path(os.path.commonpath(files))
     else:
-        raise ValueError("No output returned - something broke. Exiting...")
+        raise FileNotFoundError("No output returned - something broke. Exiting...")
     return output_path.resolve()
