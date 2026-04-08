@@ -10,7 +10,7 @@ def preprocess() -> str:
             local STEM=$(dirname -- $(readlink -e "$VCF"))
             local NAME=$(basename -- "$VCF" .vcf.gz)
             local OUT="${STEM}/${NAME}.norm.vcf.gz"
-            bcftools norm -m-any -f "$REFERENCE" -d any -W=tbi -Oz -o "$OUT" "$VCF"
+            bcftools norm -m-any -f "$REFERENCE" -d all -W=tbi -Oz -o "$OUT" "$VCF"
             echo "$OUT"
         }
         
