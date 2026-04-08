@@ -10,7 +10,7 @@ DXLink = TypedDict("DXLink", {"$dnanexus_link": DXLinkContent})
 ### Helper functions
 
 
-def launch_sompy_jobs(
+def _launch_sompy_jobs(
     contaminated_samples: list[DXLink],
     candidates: list[DXLink],
     reference: DXLink,
@@ -29,14 +29,14 @@ def launch_sompy_jobs(
         for truth in contaminated_samples:
             for query in candidates:
                 inputs = {"truth": truth, "query": query, **static_inputs}
-                sompy_job = new_subjob(
+                sompy_job = _new_subjob(
                     fn_name="run_sompy_pair", inputs=inputs, priority=priority
                 )
                 sompy_ref = cast(DXLink, sompy_job.get_output_ref("stats_csv"))
                 sompy_refs.append(sompy_ref)
         return sompy_refs
     else:
-        sompy_job = new_subjob(
+        sompy_job = _new_subjob(
             fn_name="run_sompy_batch",
             inputs={
                 "truths": contaminated_samples,
@@ -48,7 +48,7 @@ def launch_sompy_jobs(
         return cast(DXLink, sompy_job.get_output_ref("stats_csvs"))
 
 
-def new_subjob(
+def _new_subjob(
     fn_name: str, inputs: Mapping[str, DXLink | list[DXLink] | None], priority: str
 ) -> dxpy.DXJob:
     # using our own wrapper instead of dxpy.new_dxjob because new_dxjob doesn't
@@ -58,7 +58,7 @@ def new_subjob(
     return dxpy.DXJob(response["id"])
 
 
-def validate_reference_args(
+def _validate_reference_args(
     reference: DXLink, reference_index: Optional[DXLink] = None
 ) -> None:
     ref_fid = reference["$dnanexus_link"]
@@ -77,7 +77,7 @@ def validate_reference_args(
             )
 
 
-def get_single_file(parent: Path, pattern: str) -> Path:
+def _get_single_file(parent: Path, pattern: str) -> Path:
     glob = parent.glob(pattern)
     file = next(glob)
     return file
@@ -95,10 +95,10 @@ def main(
     panel_bed: Optional[DXLink] = None,
     parallel: bool = False,
 ) -> dict[str, DXLink | list[DXLink]]:
-    validate_reference_args(reference, reference_index)
+    _validate_reference_args(reference, reference_index)
     parent_job = dxpy.DXJob(dxpy.JOB_ID)
     priority = parent_job.describe().get("priority", "normal")
-    sompy_refs = launch_sompy_jobs(
+    sompy_refs = _launch_sompy_jobs(
         contaminated_samples,
         candidates,
         reference,
@@ -107,7 +107,7 @@ def main(
         parallel,
         priority,
     )
-    agg_job = new_subjob(
+    agg_job = _new_subjob(
         fn_name="gather", inputs={"sompy_files": sompy_refs}, priority=priority
     )
     agg_plot_ref = cast(DXLink, agg_job.get_output_ref("recall_plot"))
@@ -136,16 +136,16 @@ def run_sompy_batch(
     kwargs = {
         "truths": [f for f in (in_dir / "truths").rglob("*.vcf.gz")],
         "querys": [f for f in (in_dir / "queries").rglob("*.vcf.gz")],
-        "reference": get_single_file(in_dir / "reference", "*"),
+        "reference": _get_single_file(in_dir / "reference", "*"),
         "out_dir": out_dir,
-        "sompy_image": get_single_file(images, "*happy*.gz"),
-        "bcftools_image": get_single_file(images, "*bcftools*.gz"),
+        "sompy_image": _get_single_file(images, "*happy*.gz"),
+        "bcftools_image": _get_single_file(images, "*bcftools*.gz"),
     }
 
     if panel_bed:
-        kwargs["panel_bed"] = get_single_file(in_dir / "panel_bed", "*.bed*")
+        kwargs["panel_bed"] = _get_single_file(in_dir / "panel_bed", "*.bed*")
     if ref_index:
-        kwargs["ref_index"] = get_single_file(in_dir / "ref_index", "*.fai")
+        kwargs["ref_index"] = _get_single_file(in_dir / "ref_index", "*.fai")
 
     contaminant_detector.run_contam_check(**kwargs)
 
@@ -172,22 +172,22 @@ def run_sompy_pair(
     images = Path("/image")
 
     kwargs = {
-        "truths": [get_single_file(in_dir / "truth", "*vcf*")],
-        "querys": [get_single_file(in_dir / "query", "*vcf*")],
-        "reference": get_single_file(in_dir / "reference", "*"),
+        "truths": [_get_single_file(in_dir / "truth", "*vcf*")],
+        "querys": [_get_single_file(in_dir / "query", "*vcf*")],
+        "reference": _get_single_file(in_dir / "reference", "*"),
         "out_dir": out_dir,
-        "sompy_image": get_single_file(images, "*happy*.gz"),
-        "bcftools_image": get_single_file(images, "*bcftools*.gz"),
+        "sompy_image": _get_single_file(images, "*happy*.gz"),
+        "bcftools_image": _get_single_file(images, "*bcftools*.gz"),
     }
 
     if panel_bed:
-        kwargs["panel_bed"] = get_single_file(in_dir / "panel_bed", "*.bed*")
+        kwargs["panel_bed"] = _get_single_file(in_dir / "panel_bed", "*.bed*")
     if ref_index:
-        kwargs["ref_index"] = get_single_file(in_dir / "ref_index", "*.fai")
+        kwargs["ref_index"] = _get_single_file(in_dir / "ref_index", "*.fai")
 
     contaminant_detector.run_contam_check(**kwargs)
 
-    stats_csv = get_single_file(out_dir, "*.stats.csv")
+    stats_csv = _get_single_file(out_dir, "*.stats.csv")
     stats_dxfile = dxpy.upload_local_file(stats_csv)
     return {"stats_csv": stats_dxfile}
 
