@@ -55,6 +55,7 @@ def remove_vcf_extension(vcf: Path | str) -> str:
 
 
 def read_csvs(path: Path, pattern: str) -> pd.DataFrame:
-    files = path.rglob(pattern)
-    df = pd.concat([pd.read_csv(f) for f in files])
-    return df
+    files = list(path.rglob(pattern))
+    if not files:
+        raise FileNotFoundError(f"No files matching {pattern!r} under {path}")
+    return pd.concat([pd.read_csv(f) for f in files], ignore_index=True)
