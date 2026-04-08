@@ -54,7 +54,7 @@ def sompy() -> str:
         mapfile -t TRUTH_VCFS < /in/truths.txt
         mapfile -t QUERY_VCFS < /in/querys.txt
         REFERENCE=$(cat /in/reference.txt)
-        PANEL_BED=$( [ -e "/in/panel.txt" ] && cat /in/panel.txt)
+        PANEL_BED=$([ -e "/in/panel.txt" ] && cat /in/panel.txt || true)
 
         ARGS=(
             --no-count-unk
@@ -69,9 +69,9 @@ def sompy() -> str:
         fi
         
         for TRUTH in "${TRUTH_VCFS[@]}"; do
-            T_NAME=$(basename "$TRUTH" | sed -E 's/.(norm.sorted.vcf.gz|vcf.gz)$//')
+            T_NAME=$(basename "$TRUTH" | sed -E 's/(.norm.sorted.vcf.gz|.vcf.gz)$//')
             for QUERY in "${QUERY_VCFS[@]}"; do
-                Q_NAME=$(basename "$QUERY" | sed -E 's/.(norm.sorted.vcf.gz|vcf.gz)$//')
+                Q_NAME=$(basename "$QUERY" | sed -E 's/(.norm.sorted.vcf.gz|.vcf.gz)$//')
                 /opt/hap.py/bin/som.py "${ARGS[@]}" -o "/out/${T_NAME}_${Q_NAME}" "$TRUTH" "$QUERY"
             done
         done
