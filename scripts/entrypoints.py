@@ -16,7 +16,7 @@ def launch_sompy_jobs(
     reference: DXLink,
     reference_index: Optional[DXLink] = None,
     panel_bed: Optional[DXLink] = None,
-    parallel: bool = True,
+    parallel: bool = False,
     priority: str = "normal",
 ) -> DXLink | list[DXLink]:
     static_inputs = {
@@ -93,7 +93,7 @@ def main(
     reference: DXLink,
     reference_index: Optional[DXLink] = None,
     panel_bed: Optional[DXLink] = None,
-    parallel: bool = True,
+    parallel: bool = False,
 ) -> dict[str, DXLink | list[DXLink]]:
     validate_reference_args(reference, reference_index)
     parent_job = dxpy.DXJob(dxpy.JOB_ID)
