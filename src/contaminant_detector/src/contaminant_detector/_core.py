@@ -78,7 +78,7 @@ def plot_recall(
     *.stats.csv outputs from run_contam_check. If only one truthset is present,
     the output will be a barplot of the recall values for the comparison against
     each candidate. If more than one truthset is present, the output will be a heatmap.
-    The function also concatentates all of the som.py output CSV data into a single CSV, and
+    The function also concatenates all of the som.py output CSV data into a single CSV, and
     adds columns containing the sample names for contaminated samples and candidates.
 
     The colour gradient curve can be modified with the baseline argument if the recall midpoint
