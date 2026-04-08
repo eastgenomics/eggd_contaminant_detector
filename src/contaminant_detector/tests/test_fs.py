@@ -51,7 +51,7 @@ def test_extract_ref_tar_nested(tmp_path: Path, nested_ref_genome_tar_gz: Path) 
     assert expected_reference_genome.is_file()
     assert expected_reference_genome.exists()
     assert expected_ref_index.is_file()
-    assert expected_reference_genome.exists()
+    assert expected_ref_index.exists()
 
 
 def test_extract_snvs(sompy_csv_dir: Path) -> None:
