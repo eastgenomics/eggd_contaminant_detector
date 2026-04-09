@@ -17,10 +17,8 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    "pip-audit",
     "pandas==3.0.1",
     "seaborn==0.13.2",
-    "ambergris==0.1.0.1",
     "sompy @ {root:uri}/../sompy"
 ]
 
@@ -31,6 +29,7 @@ plot-recall = "contaminant_detector:plot_recall"
 
 [project.optional-dependencies]
 dev = [
+    "pip-audit",
     "pytest>=8.0.0",
     "black>=24.0.0",
     "mypy>=1.8.0",

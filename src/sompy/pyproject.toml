@@ -17,7 +17,6 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    "pandas==3.0.1",
     "ambergris==0.1.0.1"
 ]
 
