@@ -9,7 +9,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-24.04
-    continue-on-error: true
     
     steps:
       - name: Checkout code
