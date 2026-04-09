@@ -17,12 +17,13 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    "dxpy==0.405.0",
+    "dxpy==0.407.0",
     "contaminant-detector @ {root:uri}/src/contaminant_detector"
 ]
 
 [project.optional-dependencies]
 dev = [
+    "pip-audit",
     "pytest>=8.0.0",
     "black>=24.0.0",
     "mypy>=1.8.0",

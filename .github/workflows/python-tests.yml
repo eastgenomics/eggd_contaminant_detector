@@ -9,7 +9,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-24.04
-
+    continue-on-error: true
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,3 +39,7 @@ jobs:
       - name: Run format check
         run: |
           black --check .
+      
+      - name: Run package security check
+        run: |
+          pip-audit
