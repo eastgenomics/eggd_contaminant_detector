@@ -14,7 +14,7 @@ def run_contam_check(
     out_dir: Path,
     sompy_image: str|Path,
     bcftools_image: Optional[str|Path],
-    panel_bed: Optional[Path] = None,
+    panel_regions: Optional[Path] = None,
     ref_index: Optional[Path] = None,
     preprocess: bool = True,
 ) -> tuple[Path, Path]:
@@ -88,7 +88,7 @@ def plot_recall(
 
     For instance, if you know your average recall value between unrelated and uncontaminated samples for
     your assay is 0.6, then setting the baseline to 0.6 will cause everything up to that point to be represented
-    with the low end of the colour scale, and everything after that point will accelarate into the high end
+    with the low end of the colour scale, and everything after that point will accelerate into the high end
     fairly quickly.
 
     Args:
