@@ -110,44 +110,33 @@ In addition to installing the dependencies required for production, this will in
 > ```
 > export DOCKER_HOST=unix://$HOME/.docker/desktop/docker.sock`
 > ```
-
-> [!WARNING]
-> When you are finished with development, **remember to deactivate this environment before building the app assets**, as you risk including development tools that the package does not depend on. Instructions on doing this are discussed further down.
+> To reset the variable to its default when you're done, run `unset DOCKER_HOST`
 
 ### Deployment to DNANexus
 
 Deployment will depend on what you change:
 
-- If you change `src/eggd_contaminant_detector/app.py`:
+- If you change `scripts/entrypoints.py`:
     - You only need to re-build the app by running `dx build --app .`
-- If you change any other python module:
+- If you change anything in `src` (i.e. that isn't in `src/${module}/tests`):
     - build and deploy python dependencies as a DNANexus app asset (see section below)
-    - replace the record in `assetDepends`
+    - replace the record ID in `assetDepends`
     - rebuild the app
-- If you change the docker image:
+- If you change the docker image(s):
     - build and deploy the docker image as a DNANexus app asset (see section below)
-    - replace the record in `assetDepends`
+    - replace the record ID in `assetDepends`
     - rebuild the app
 
-In other words - any changes to the app assets (including the sub-packages) need to be included in dxapp.json, which necessitates an app rebuild.
+In other words - any changes to the app assets (including the sub-packages) need to be included in `dxapp.json`, which necessitates an app rebuild.
 
 Upon launching the app, it will download the associated app assets and mount them to the worker at the specified asset paths, circumventing the need to run any additional `dx download`, `pip install`, or `docker build`/`docker load` commands within the app script.
 
 ### Build and deploy Python dependencies
 
-> [!WARNING]
-> As mentioned above: **remember to deactivate this environment before building the app assets**.
-
-Deactivate any venv before proceeding by running `deactivate`.
+A helper script has been provided to rebuild and re-push any updated python modules in `src/`. We highly recommend using that to rebuild the python asset:
 
 ```
-## If you've followed this before and have packages in the dist-packages directory,
-## empty it with `rm -rf ./python-deps/resources/usr/local/lib/python3.12/dist-packages/`
-mkdir -p ./python-deps/resources/usr/local/lib/python3.12/dist-packages/
-python3 -m venv prod_venv
-source prod_venv/bin/activate
-pip install --target ./python-deps/resources/usr/local/lib/python3.12/dist-packages/ .
-dx build_asset python-deps
+bash rebuild_python_deps_asset.sh
 ```
 
 This will launch a build job, which produces an asset bundle and a record ID for reference:
