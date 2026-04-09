@@ -22,11 +22,6 @@ dependencies = [
     "sompy @ {root:uri}/../sompy"
 ]
 
-[project.scripts]
-run-sompy-pair = "contaminant_detector:run_sompy_pair"
-run-sompy-batch = "contaminant_detector:run_sompy_batch"
-plot-recall = "contaminant_detector:plot_recall"
-
 [project.optional-dependencies]
 dev = [
     "pip-audit",
