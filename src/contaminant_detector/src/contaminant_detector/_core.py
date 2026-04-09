@@ -62,8 +62,8 @@ def run_contam_check(
         "bcftools_image": bcftools_image,
         "preprocess": preprocess,
     }
-    if panel_bed:
-        kwargs["panel_regions"] = panel_bed
+    if panel_regions:
+        kwargs["panel_regions"] = panel_regions
     stats_csv, metrics_json = sompy.run(**kwargs)
     return stats_csv, metrics_json
 
