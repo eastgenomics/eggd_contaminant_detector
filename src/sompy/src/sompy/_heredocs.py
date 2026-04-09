@@ -2,7 +2,7 @@ import textwrap
 
 
 def preprocess() -> str:
-    script = textwrap.dedent("""
+    script = textwrap.dedent(r"""
         set -e -x
         bcftools_norm() {
             local VCF=$1
@@ -49,7 +49,7 @@ def preprocess() -> str:
 
 
 def sompy() -> str:
-    script = textwrap.dedent("""
+    script = textwrap.dedent(r"""
         set -e -x
         mapfile -t TRUTH_VCFS < /in/truths.txt
         mapfile -t QUERY_VCFS < /in/querys.txt
@@ -69,9 +69,9 @@ def sompy() -> str:
         fi
         
         for TRUTH in "${TRUTH_VCFS[@]}"; do
-            T_NAME=$(basename "$TRUTH" | sed -E 's/(.norm.sorted.vcf.gz|.vcf.gz)$//')
+            T_NAME=$(basename "$TRUTH" | sed -E 's/(\.norm\.sorted\.vcf\.gz|\.vcf\.gz)$//')
             for QUERY in "${QUERY_VCFS[@]}"; do
-                Q_NAME=$(basename "$QUERY" | sed -E 's/(.norm.sorted.vcf.gz|.vcf.gz)$//')
+                Q_NAME=$(basename "$QUERY" | sed -E 's/(\.norm\.sorted\.vcf\.gz|\.vcf\.gz)$//')
                 /opt/hap.py/bin/som.py "${ARGS[@]}" -o "/out/${T_NAME}_${Q_NAME}" "$TRUTH" "$QUERY"
             done
         done
