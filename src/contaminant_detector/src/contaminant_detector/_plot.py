@@ -30,7 +30,6 @@ def _generate_comparison_plot(
     Returns:
         Figure: Matplotlib figure containing the generated plot.
     """
-    df = _dataframe.set_sample_names(df)
     if df["contaminated_samples"].nunique() == 1:
         fig = barplot(
             data=df,

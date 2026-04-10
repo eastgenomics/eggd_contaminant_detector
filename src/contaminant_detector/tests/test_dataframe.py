@@ -4,19 +4,6 @@ import pandas as pd
 import contaminant_detector._dataframe
 
 
-def test_parse_samples(abstract_sompy_df: pd.DataFrame) -> None:
-    df = contaminant_detector._dataframe.parse_samples(abstract_sompy_df)
-    groups = ["a", "b", "c", "d", "e"]
-    expected_truth_column = pd.Series(
-        [f"truth_{group}" for group in groups], name="truth"
-    )
-    expected_query_column = pd.Series(
-        [f"query_{group}" for group in groups], name="query"
-    )
-    assert df["truth"].equals(expected_truth_column)
-    assert df["query"].equals(expected_query_column)
-
-
 def test_shorten() -> None:
     epic_name = "123456789-26001Z0001-26NGSHO01-1234-U-98765432"
     epic_name_shortened = "26001Z0001-26NGSHO01"

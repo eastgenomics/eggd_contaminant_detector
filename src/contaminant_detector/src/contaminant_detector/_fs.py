@@ -40,7 +40,7 @@ def extract_ref_tar(ref_path: Path, destination: Path) -> Path:
 
 def extract_snvs(input_path: Path) -> pd.DataFrame:
     sompy_df = read_csvs(input_path, pattern="*.stats.csv")
-    parsed_df = _dataframe.parse_samples(sompy_df)
+    parsed_df = _dataframe.set_sample_names(sompy_df)
     snvs: pd.DataFrame = parsed_df[parsed_df["type"] == "SNVs"]
     return snvs
 
