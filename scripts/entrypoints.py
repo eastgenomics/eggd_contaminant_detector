@@ -19,6 +19,8 @@ def _launch_sompy_jobs(
     parallel: bool = False,
     priority: str = "normal",
 ) -> DXLink | list[DXLink]:
+    """Launches jobs targeting either the run_sompy_batch or
+    run_sompy_pair entrypoints, depending on the parallel flag"""
     static_inputs = {
         "reference": reference,
         "ref_index": reference_index,
@@ -51,6 +53,7 @@ def _launch_sompy_jobs(
 def _new_subjob(
     fn_name: str, inputs: Mapping[str, DXLink | list[DXLink] | None], priority: str
 ) -> dxpy.DXJob:
+    """Launches a new DNANexus sub-job"""
     # using our own wrapper instead of dxpy.new_dxjob because new_dxjob doesn't
     # support setting the job priority
     payload = {"function": fn_name, "input": inputs, "priority": priority}
@@ -61,6 +64,7 @@ def _new_subjob(
 def _validate_reference_args(
     reference: DXLink, reference_index: Optional[DXLink] = None
 ) -> None:
+    """Validates arguments submitted to reference and reference_index"""
     ref_fid = reference["$dnanexus_link"]
     # dxpy.describe's return type hint is (Any | list[Unknown]).
     # This is too broad - it is actually dict[str, Any], or a list thereof.
@@ -78,6 +82,7 @@ def _validate_reference_args(
 
 
 def _get_single_file(parent: Path, pattern: str) -> Path:
+    """Gets a single file from a directory matching the pattern"""
     glob = parent.glob(pattern)
     file = next(glob)
     return file

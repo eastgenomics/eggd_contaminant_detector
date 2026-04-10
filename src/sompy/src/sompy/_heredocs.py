@@ -2,6 +2,8 @@ import textwrap
 
 
 def preprocess() -> str:
+    """Returns a bash heredoc to be submitted to docker command execution. Handles
+    normalising and sorting sample VCFs"""
     script = textwrap.dedent(r"""
         set -e -x
         bcftools_norm() {
@@ -49,6 +51,7 @@ def preprocess() -> str:
 
 
 def sompy() -> str:
+    """Returns a heredoc to be submitted to docker command execution. Handles running som.py"""
     script = textwrap.dedent(r"""
         set -e -x
         mapfile -t TRUTH_VCFS < /in/truths.txt

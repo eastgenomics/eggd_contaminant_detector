@@ -3,6 +3,12 @@ from . import _fs
 
 
 def set_sample_names(sompy_df: pd.DataFrame) -> pd.DataFrame:
+    """ "
+    Extracts sample names from sompycmd field, and stores the result in new
+    fields - this will be stored in the "contaminated_samples" or "candidates"
+    fields for truth and query samples respectively. Names will be shortened
+    if they conform to the EPIC sample name format.
+    """
     sompy_df["contaminated_samples"] = (
         sompy_df["sompycmd"].apply(get_sample_name, sample="truth").apply(shorten)
     )
@@ -13,6 +19,7 @@ def set_sample_names(sompy_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def get_sample_name(sompycmd: str, sample: str = "truth") -> str:
+    """Parses the sompycmd field for the truth or query VCF paths"""
     parts = sompycmd.split(" ")
     if sample == "truth":
         vcf_path = parts[-2]
@@ -27,6 +34,7 @@ def get_sample_name(sompycmd: str, sample: str = "truth") -> str:
 
 
 def shorten(name: str) -> str:
+    """Shortens the sample name if stored in EPIC format"""
     parts = name.split("-")
     if len(parts) >= 3:
         return f"{parts[1]}-{parts[2]}"

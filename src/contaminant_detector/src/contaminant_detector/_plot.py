@@ -23,12 +23,6 @@ def _generate_comparison_plot(
     If multiple unique entries in group A, it generates a heatmap. Please note that
     in this case, the mappings between entries in group A and group B must be of equal
     length.
-
-    Args:
-        df: DataFrame of your dataset
-
-    Returns:
-        Figure: Matplotlib figure containing the generated plot.
     """
     if df["contaminated_samples"].nunique() == 1:
         fig = barplot(
@@ -66,6 +60,7 @@ def barplot(
     title: str,
     figsize: tuple[int, int],
 ) -> Figure:
+    """Generates a barplot"""
     fig, ax = plt.subplots(figsize=figsize)
     sns.barplot(data=data, x=x, y=y, ax=ax, legend=False)
     ax.set_xlabel(xlab)
@@ -87,6 +82,7 @@ def heatmap(
     figsize: tuple[int, int],
     slope_params: Optional[tuple[float, float, float]],
 ) -> Figure:
+    """Generates a heatmap"""
     fig, ax = plt.subplots(figsize=figsize)
     hm_data = data.pivot(index=x, columns=y, values=z)
     params = {"cmap": colour_scheme, "annot": True, "fmt": ".3f", "ax": ax}

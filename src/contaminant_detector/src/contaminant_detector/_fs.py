@@ -9,6 +9,8 @@ from . import _dataframe
 
 
 def setup_reference(reference: Path, index: Optional[Path] = None) -> Path:
+    """Prepares the reference genome by either extracting the tar bundle, or
+    moving the index to the reference directory"""
     if reference.name.endswith((".tar", ".tar.gz", ".tgz")):
         processed_ref = extract_ref_tar(reference, reference.parent)
     else:
@@ -21,6 +23,7 @@ def setup_reference(reference: Path, index: Optional[Path] = None) -> Path:
 
 
 def extract_ref_tar(ref_path: Path, destination: Path) -> Path:
+    """Handles extraction of reference genome files from tar archives"""
     destination.mkdir(parents=True, exist_ok=True)
     destination_root = destination.resolve()
     with tarfile.open(ref_path) as tar:
@@ -39,6 +42,8 @@ def extract_ref_tar(ref_path: Path, destination: Path) -> Path:
 
 
 def extract_snvs(input_path: Path) -> pd.DataFrame:
+    """Subsets som.py output for SNVs. Also sets the contaminated_samples
+    and candidates fields."""
     sompy_df = read_csvs(input_path, pattern="*.stats.csv")
     parsed_df = _dataframe.set_sample_names(sompy_df)
     snvs: pd.DataFrame = parsed_df[parsed_df["type"] == "SNVs"]
@@ -46,12 +51,14 @@ def extract_snvs(input_path: Path) -> pd.DataFrame:
 
 
 def remove_vcf_extension(vcf: Path | str) -> str:
+    """Strips common VCF name extensions"""
     vcf_name = Path(vcf).name
     pattern = r"(\.norm\.sorted|\.sorted)?\.(?:g\.)?g?vcf(?:\.gz)?$"
     return re.sub(pattern, "", vcf_name)
 
 
 def read_csvs(path: Path, pattern: str) -> pd.DataFrame:
+    """Reads a directory of CSV files into a single data frame"""
     files = list(path.rglob(pattern))
     if not files:
         raise FileNotFoundError(f"No files matching {pattern!r} under {path}")

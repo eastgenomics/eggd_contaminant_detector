@@ -1,5 +1,4 @@
 import os
-from functools import wraps
 from pathlib import Path
 from typing import Optional
 
@@ -8,6 +7,7 @@ from docker.types import Mount
 
 
 def resolve_in_dir(*tool_args: Optional[Path], **tool_kwargs: Optional[Path]) -> Path:
+    """Returns the highest-level directory shared by all inputs"""
     all_args = list(tool_args) + list(tool_kwargs.values())
     paths = [Path(arg) for arg in all_args if isinstance(arg, (str, Path))]
     if len(paths) == 1:
@@ -18,6 +18,7 @@ def resolve_in_dir(*tool_args: Optional[Path], **tool_kwargs: Optional[Path]) ->
 
 
 def make_mounts(in_dir: str | Path, out_dir: str | Path) -> list[Mount]:
+    """Makes docker bindmounts"""
     host_in = Path(in_dir)
     cont_in = Path("/in")
     host_out = Path(out_dir)
@@ -66,16 +67,6 @@ def get_output_path(out_dir: Path, pattern: str) -> Path:
     """
     Fetches output path of file matching pattern, or common parent directory
     of files if multiple matches found.
-
-    Args:
-        out_dir: Path object pointing to the output directory
-        pattern: string object representing the glob file pattern
-
-    Returns:
-        Path object pointing to file, or common parent directory if multiple matches found
-
-    Raises:
-        FileNotFoundError: If no files found matching the submitted pattern
     """
     files = [f for f in out_dir.glob(pattern)]
     if len(files) == 1:
