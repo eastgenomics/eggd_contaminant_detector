@@ -17,10 +17,14 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
+    "click==8.3.3",
     "pandas==3.0.1",
     "seaborn==0.13.2",
     "sompy @ {root:uri}/../sompy"
 ]
+
+[project.scripts]
+contam = "contaminant_detector.cli:main"
 
 [project.optional-dependencies]
 dev = [
