@@ -117,12 +117,20 @@ def check(
     "--in",
     "-i",
     "input",
+    required=True,
     type=click.Path(exists=True, path_type=Path, resolve_path=True),
 )
 @click.option(
-    "--out", "-o", type=click.Path(exists=True, path_type=Path, resolve_path=True)
+    "--out", 
+    "-o",
+    required=True,
+    type=click.Path(path_type=Path, resolve_path=True)
 )
-@click.option("--baseline", "-b", type=float)
+@click.option(
+    "--baseline",
+    "-b",
+    type=float
+)
 def plot(input: Path, out: Path, baseline: float = 0.4) -> None:
     """Plots a heatmap or barplot using the output of the check command"""
     plot_recall(in_dir=input, out_dir=out, baseline=baseline)
