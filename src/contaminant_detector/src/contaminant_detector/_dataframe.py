@@ -3,7 +3,7 @@ from . import _fs
 
 
 def set_sample_names(sompy_df: pd.DataFrame) -> pd.DataFrame:
-    """ "
+    """
     Extracts sample names from sompycmd field, and stores the result in new
     fields - this will be stored in the "contaminated_samples" or "candidates"
     fields for truth and query samples respectively. Names will be shortened
