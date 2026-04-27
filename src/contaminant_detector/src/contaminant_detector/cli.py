@@ -114,14 +114,13 @@ def check(
 
 @main.command()
 @click.option(
-    "--in",
+    "--in-dir",
     "-i",
-    "input",
     required=True,
     type=click.Path(exists=True, path_type=Path, resolve_path=True),
 )
 @click.option(
-    "--out", 
+    "--out-dir", 
     "-o",
     required=True,
     type=click.Path(path_type=Path, resolve_path=True)
@@ -129,9 +128,10 @@ def check(
 @click.option(
     "--baseline",
     "-b",
-    type=float
+    type=float,
+    default=0.4
 )
-def plot(input: Path, out: Path, baseline: float = 0.4) -> None:
+def plot(in_dir: Path, out_dir: Path, baseline: float=0.4) -> None:
     """Plots a heatmap or barplot using the output of the check command"""
-    plot_recall(in_dir=input, out_dir=out, baseline=baseline)
-    click.echo(f"Results written to {out}")
+    plot_recall(in_dir=in_dir, out_dir=out_dir, baseline=baseline)
+    click.echo(f"Results written to {out_dir}")
