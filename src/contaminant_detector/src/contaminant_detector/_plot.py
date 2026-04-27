@@ -8,8 +8,6 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import TwoSlopeNorm
 from matplotlib.figure import Figure
 
-from . import _dataframe
-
 
 def _generate_comparison_plot(
     df: pd.DataFrame,
