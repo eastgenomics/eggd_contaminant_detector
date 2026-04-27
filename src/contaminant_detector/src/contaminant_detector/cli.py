@@ -123,7 +123,7 @@ def check(
     "--out", "-o", type=click.Path(exists=True, path_type=Path, resolve_path=True)
 )
 @click.option("--baseline", "-b", type=float)
-def plot(input: Path, out: Path, baseline: float) -> None:
+def plot(input: Path, out: Path, baseline: float = 0.4) -> None:
     """runs plots"""
     plot_recall(in_dir=input, out_dir=out, baseline=baseline)
     click.echo(f"Results written to {out}")
