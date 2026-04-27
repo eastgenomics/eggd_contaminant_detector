@@ -97,7 +97,7 @@ def check(
     bcftools_image: Optional[str | Path],
     ref_index: Optional[Path],
 ) -> None:
-    """Runs checks"""
+    """Runs pairwise comparisons between contaminated sample VCFs and candidate VCFs using som.py."""
     run_contam_check(
         truths=[*truth],
         querys=[*query],
@@ -124,6 +124,6 @@ def check(
 )
 @click.option("--baseline", "-b", type=float)
 def plot(input: Path, out: Path, baseline: float = 0.4) -> None:
-    """runs plots"""
+    """Plots a heatmap or barplot using the output of the check command"""
     plot_recall(in_dir=input, out_dir=out, baseline=baseline)
     click.echo(f"Results written to {out}")
