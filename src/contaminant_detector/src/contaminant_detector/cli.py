@@ -69,7 +69,7 @@ def main():
     "-b",
     type=PathOrString(),
 )
-@click.option("--normalise", "-n", is_flag=True, default=True)
+@click.option("--normalise/--no-normalise", "-n/-N", is_flag=True, default=True)
 def check(
     truth: tuple[Path],
     query: tuple[Path],
