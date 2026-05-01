@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "egg-helpers"
+name = "contaminant-detector"
 version = "0.1.0"
-description = "Helper functions for common EGLH uses"
+description = "A pipeline for running sompy in Docker and analyzing the resulting stats."
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
@@ -17,23 +17,33 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    "docker==7.1.0",
+    "click==8.3.3",
     "pandas==3.0.1",
-    "matplotlib==3.10.8",
-    "seaborn==0.13.2"
+    "seaborn==0.13.2",
+    "sompy @ {root:uri}/../sompy"
 ]
+
+[project.scripts]
+contam = "contaminant_detector.cli:main"
+
 [project.optional-dependencies]
 dev = [
+    "pip-audit",
     "pytest>=8.0.0",
     "black>=24.0.0",
     "mypy>=1.8.0",
+    "pytest-mock",
+    "pytest-cov",
     "types-docker",
     "pandas-stubs",
     "types-seaborn"
 ]
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.hatch.build.targets.wheel]
-packages = ["src/egg_helpers"]
+packages = ["src/contaminant_detector"]
 
 [tool.black]
 line-length = 88
@@ -44,6 +54,14 @@ python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["contaminant_detector.*"]
+follow_untyped_imports = true
 
 [tool.pytest.ini_options]
-testpaths = ["test"]
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore:Use setlocale:DeprecationWarning:pytest_nunit"
+]

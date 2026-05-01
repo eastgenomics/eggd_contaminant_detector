@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "contaminant-detector"
+name = "eggd-contaminant-detector"
 version = "0.1.0"
-description = "A pipeline for running sompy in Docker and analyzing the resulting stats."
+description = "DNANexus app for cross-contamination detection"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
@@ -17,17 +17,18 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    "dxpy==0.405.0",
-    "egg_helpers @ {root:uri}/src/egg_helpers",
-    "sompy @ {root:uri}/src/sompy"
+    "dxpy==0.407.0",
+    "contaminant-detector @ {root:uri}/src/contaminant_detector"
 ]
 
 [project.optional-dependencies]
 dev = [
+    "pip-audit",
     "pytest>=8.0.0",
     "black>=24.0.0",
     "mypy>=1.8.0",
     "pytest-cov",
+    "pytest-mock",
     "types-docker",
     "pandas-stubs",
     "types-seaborn"
@@ -37,7 +38,7 @@ dev = [
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/eggd_contaminant_detector"]
+only-include = ["scripts"]
 
 [tool.black]
 line-length = 88
@@ -48,10 +49,10 @@ python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-testpaths = ["test"]
+testpaths = ["src/sompy/tests", "src/contaminant_detector/tests"]
 filterwarnings = [
     "ignore:Use setlocale:DeprecationWarning:pytest_nunit"
 ]
-

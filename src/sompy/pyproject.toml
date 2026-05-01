@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "sompy"
 version = "0.1.0"
-description = "Functions for running sompy in the hap.py docker container, and parsing the output"
+description = "Functions for running sompy and bcftools in their respective docker containers, and parsing the output"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
@@ -17,13 +17,15 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    "pandas==3.0.1",
-    "egg-helpers"
+    "ambergris==0.1.0.1"
 ]
 
 [project.optional-dependencies]
 dev = [
+    "pip-audit",
     "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "pytest-mock>=3.15.1",
     "black>=24.0.0",
     "mypy>=1.8.0",
     "types-docker",
@@ -31,8 +33,14 @@ dev = [
     "types-seaborn"
 ]
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/sompy"]
+
+[tool.hatch.envs.default]
+features = ["dev"]
 
 [tool.black]
 line-length = 88
@@ -44,5 +52,10 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 
+[[tool.mypy.overrides]]
+module = ["ambergris.*"]
+follow_untyped_imports = true
+
 [tool.pytest.ini_options]
-testpaths = ["test"]
+testpaths = ["tests"]
+addopts = "--cov=sompy --cov-report=term-missing"

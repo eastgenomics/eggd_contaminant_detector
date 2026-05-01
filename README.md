@@ -27,6 +27,10 @@ The app is intended to help with determining the origin of cross-sample contamin
     panel-regions BED: [-ipanel_bed=(file)]
         BED file containing panel-specific regions to restrict the analysis to. All reference
         positions will be used otherwise.
+    
+    parallel mode: [-iparallel=(boolean, default=false)]
+        Switch for parallel mode. If switched on, one sompy subjob will be launched per pair. If
+        switched off, a single node will be used for all sompy executions.
 
 ## What are the outputs?
 
@@ -106,44 +110,33 @@ In addition to installing the dependencies required for production, this will in
 > ```
 > export DOCKER_HOST=unix://$HOME/.docker/desktop/docker.sock`
 > ```
-
-> [!WARNING]
-> When you are finished with development, **remember to deactivate this environment before building the app assets**, as you risk including development tools that the package does not depend on. Instructions on doing this are discussed further down.
+> To reset the variable to its default when you're done, run `unset DOCKER_HOST`
 
 ### Deployment to DNANexus
 
 Deployment will depend on what you change:
 
-- If you change `src/eggd_contaminant_detector/app.py`:
+- If you change `scripts/entrypoints.py`:
     - You only need to re-build the app by running `dx build --app .`
-- If you change any other python module (including `eggd_contaminant_detector.utils`):
+- If you change anything in `src` (i.e. that isn't in `src/${module}/tests`):
     - build and deploy python dependencies as a DNANexus app asset (see section below)
-    - replace the record in `assetDepends`
+    - replace the record ID in `assetDepends`
     - rebuild the app
-- If you change the docker image:
+- If you change the docker image(s):
     - build and deploy the docker image as a DNANexus app asset (see section below)
-    - replace the record in `assetDepends`
+    - replace the record ID in `assetDepends`
     - rebuild the app
 
-In other words - any changes to the app assets (including the sub-packages) need to be included in dxapp.json, which necessitates an app rebuild.
+In other words - any changes to the app assets (including the sub-packages) need to be included in `dxapp.json`, which necessitates an app rebuild.
 
 Upon launching the app, it will download the associated app assets and mount them to the worker at the specified asset paths, circumventing the need to run any additional `dx download`, `pip install`, or `docker build`/`docker load` commands within the app script.
 
 ### Build and deploy Python dependencies
 
-> [!WARNING]
-> As mentioned above: **remember to deactivate this environment before building the app assets**.
-
-Deactivate any venv before proceeding by running `deactivate`.
+A helper script has been provided to rebuild and re-push any updated python modules in `src/`. We highly recommend using that to rebuild the python asset:
 
 ```
-## If you've followed this before and have packages in the dist-packages directory,
-## empty it with `rm -rf ./python-deps/resources/usr/local/lib/python3.12/dist-packages/`
-mkdir -p ./python-deps/resources/usr/local/lib/python3.12/dist-packages/
-python3 -m venv prod_venv
-source prod_venv/bin/activate
-pip install --target ./python-deps/resources/usr/local/lib/python3.12/dist-packages/ .
-dx build_asset python-deps
+bash rebuild_python_deps_asset.sh
 ```
 
 This will launch a build job, which produces an asset bundle and a record ID for reference:
@@ -175,41 +168,53 @@ Now, when the app launches, it will unpack the resources and mount them at `/usr
 
 #### A note on the app structure (and a warning on app assets)
 
-The app is composed of the following sub-packages:
+The app has the following structure:
 
-1. **eggd_contaminant_detector** (`src/eggd_contaminant_detector`) (_top-level package_)
-    - provides the DNANexus interface to this specific app, plus some utilities specific to eggd_contaminant_detector
+1. **entrypoints.py** (`scripts/entrypoints.py`) (_DNANexus app script_)
+    - Handles DNANexus interactions _only_ - launching jobs/subjobs, downloading inputs, uploading outputs etc.
+1. **contaminant_detector** (`src/contaminant_detector`) (_subpackage_)
+    - Handles filesystem configuration, running contam checks, and plotting recall barplots/heatmaps. Exposes `contaminant_detector.run_contam_check`, and `contaminant_detector.plot_recall`.
 2. **sompy** (`src/sompy`) (_subpackage_)
-    - provides a simple interface to the pkrusche/hap.py docker image
-3. **egg_helpers** (`src/egg_helpers`) (_subpackage_)
-    - provides a simple interface to Docker's python SDK, and some plotting utilities
+    - provides a simple interface to the pkrusche/hap.py and staphb/bcftools:1.23 docker images. Exposes `sompy.run`.
 
 This app structure minimises the friction related to dependencies by allowing all of its components to follow python packaging practices. Each of the app's modules are installable, which makes it trivial to import, re-use, and/or test each of their behaviours.
 
 This means that the app's dependencies (listed in pyproject.toml) include this app's sub-packages themselves. As such, heed the following:
 
 > [!NOTE]
-> If you change `src/eggd_contaminant_detector/app.py`, you will only need to run `dx build --app .` to deploy the changes (i.e. no package reinstallation is needed)
-> If you change any other component (such as anything in `sompy`, `egg_helpers` or `eggd_contaminant_detector.utils`), you will need to build the 
+> If you change `scripts/entrypoints.py`, you will only need to run `dx build --app .` to deploy the changes (i.e. no package reinstallation is needed)
+> If you change any other component (such as anything in `sompy` or `contaminant_detector`), you will need to rebuild the python package asset
 
 > [!WARNING]
-> Additionally: if you introduce a new package to either `sompy` or `egg_helpers`, include it at the pyproject.toml file under **that** package, **NOT** the top-level package.
+> Additionally: if you introduce a new dependency to either `sompy` or `contaminant_detector`, include it at the pyproject.toml file under **that** package, **NOT** the top-level package.
 
 ### Build and deploy hap.py docker image
 
 Assumes you have already pulled or fetched a tarball of `pkrusche/hap.py`. If you already have a tarball of the docker image, replace `docker save` with `mv`.
 
 ```
-mkdir -p ./happy-image/resource/image/
+mkdir -p ./happy-image/resources/image/
 docker save pkrusche/hap.py:v0.3.9 | gzip > happy-image/resources/image/happy_docker.tar.gz
 dx build_asset happy-image
 ```
 
 The job will return a record ID; edit `dxapp.json` and replace the previous ID under `assetDepends` (see Python package instructions above).
 
+### Build and deploy bcftools docker image
+
+Assumes you have already pulled or fetched a tarball of `staphb/bcftools`. If you already have a tarball of the docker image, replace `docker save` with `mv`.
+
+```
+mkdir -p ./bcftools-image/resources/image/
+docker save staphb/bcftools | gzip > happy-image/resources/image/bcftools-image.tar.gz
+dx build_asset bcftools-image
+```
+
+The job will return a record ID; edit `dxapp.json` and replace the previous ID under `assetDepends` (see Python package instructions above).
+
 #### Build the app
 
-If changes to `dxapp.json` or `src/eggd_contamination_detector/app.py` are made, rebuild the app as follows:
+If changes to `dxapp.json` or `scripts/entrypoints.py` are made, rebuild the app as follows:
 
 ```
 dx build --app .

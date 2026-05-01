@@ -52,6 +52,13 @@
         ".bed"
       ],
       "help": "BED file containing panel-specific regions to restrict the analysis to. All reference positions will be used otherwise."
+    },
+    {
+      "name": "parallel",
+      "class": "boolean",
+      "default": false,
+      "label": "parallel mode",
+      "help": "Switch for parallel mode. If switched on, one sompy subjob will be launched per pair. If switched off, a single node will be used for all sompy executions."
     }
   ],
   "outputSpec": [
@@ -77,10 +84,13 @@
   "runSpec": {
     "assetDepends": [
       {
-	        "id": "record-J6YQ6204p9ffq8JJ6JF7y7zk"
+          "id": "record-J7F1x0Q47V0JgjB708yq6xXK"
       },
       {
-	        "id": "record-J6KfPzQ48PFXB5GF6BbYyFY1"
+          "id": "record-J6KfPzQ48PFXB5GF6BbYyFY1"
+      },
+      {
+          "id": "record-J76XZv846FkPvyQbBj969Y8v"
       }
     ],
     "timeoutPolicy": {
@@ -92,7 +102,26 @@
     "release": "24.04",
     "version": "0",
     "interpreter": "python3",
-    "file": "src/eggd_contaminant_detector/app.py"
+    "file": "scripts/entrypoints.py",
+    "priority": "low",
+    "entryPoints": {
+      "run_sompy_batch": {
+        "outputSpec": [
+          { "name": "stats_csvs", "class": "array:file" }
+        ]
+      },
+      "run_sompy_pair": {
+        "outputSpec": [
+          { "name": "stats_csv", "class": "file" }
+        ]
+      },
+      "gather": {
+        "outputSpec": [
+          { "name": "sompy_csv", "class": "file" },
+          { "name": "recall_plot", "class": "file" }
+        ]
+      }
+    }
   },
   "developers":[
     "org-emee_1"
@@ -106,7 +135,10 @@
         "main": {
           "instanceType": "mem1_ssd1_v2_x2"
         },
-        "run_sompy": {
+        "run_sompy_pair": {
+          "instanceType": "mem1_ssd1_v2_x4"
+        },
+        "run_sompy_batch": {
           "instanceType": "mem1_ssd1_v2_x4"
         },
         "gather": {

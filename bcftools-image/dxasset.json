@@ -1,0 +1,9 @@
+{
+  "name": "bcftools-image",
+  "title": "staphb/bcftools image",
+  "description": "Docker image containing bcftools toolkit",
+  "version": "1.23",
+  "distribution": "Ubuntu",
+  "instanceType": "mem2_ssd1_x4",
+  "release": "24.04"
+}
