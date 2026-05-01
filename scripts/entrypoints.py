@@ -100,6 +100,9 @@ def main(
     panel_bed: Optional[DXLink] = None,
     parallel: bool = False,
 ) -> dict[str, DXLink | list[DXLink]]:
+    """
+    Entrypoint for running the job orchestration step
+    """
     _validate_reference_args(reference, reference_index)
     parent_job = dxpy.DXJob(dxpy.JOB_ID)
     priority = parent_job.describe().get("priority", "normal")
@@ -131,6 +134,9 @@ def run_sompy_batch(
     ref_index: Optional[DXLink] = None,
     panel_bed: Optional[DXLink] = None,
 ) -> dict[str, list[dxpy.DXFile]]:
+    """
+    Entrypoint for running the contamination analysis (i.e. sompy) step in batch mode
+    """
     dxpy.download_all_inputs(parallel=True)
 
     dx_home = Path("/home") / "dnanexus"
@@ -169,6 +175,9 @@ def run_sompy_pair(
     ref_index: Optional[DXLink] = None,
     panel_bed: Optional[DXLink] = None,
 ) -> dict[str, dxpy.DXFile]:
+    """
+    Entrypoint for running the contamination analysis (i.e.) sompy step in single-pair mode
+    """
     dxpy.download_all_inputs(parallel=True)
 
     dx_home = Path("/home") / "dnanexus"
@@ -199,6 +208,9 @@ def run_sompy_pair(
 
 @dxpy.entry_point("gather")
 def gather(sompy_files: list[DXLink]) -> dict[str, dxpy.DXFile]:
+    """
+    Entrypoint for running the plotting step
+    """
     dxpy.download_all_inputs(parallel=True)
     in_dir = Path("/home") / "dnanexus" / "in"
     out_dir = Path("/home") / "dnanexus" / "out"
